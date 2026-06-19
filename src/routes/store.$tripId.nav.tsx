@@ -320,31 +320,45 @@ function Nav() {
               {arrived ? <MapPinIcon className="h-5 w-5" /> : <ArrowUp className="h-5 w-5" />}
             </div>
             <div className="flex-1 text-sm">
-              {arrived ? (
+              {arrived && focused?.isCheckout ? (
+                <>
+                  <div className="font-semibold text-emerald-700">You've reached Checkout</div>
+                  <div className="text-xs text-muted-foreground">Pay & finish your trip.</div>
+                </>
+              ) : arrived ? (
                 <>
                   <div className="font-semibold text-emerald-700">Scan it to check off this stop</div>
-                  <div className="text-xs text-muted-foreground">Then tap “Continue” to head to the next one.</div>
+                  <div className="text-xs text-muted-foreground">Auto-walking resumes after you scan.</div>
                 </>
-              ) : nextIdx < 0 ? (
+              ) : focused?.isCheckout ? (
                 <>
-                  <div className="font-semibold">All stops complete</div>
-                  <div className="text-xs text-muted-foreground">Head to checkout when you're ready.</div>
+                  <div className="font-semibold">{headingLabel || "Heading to Checkout"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    ≈ {distanceToNext.toFixed(0)} steps to Checkout
+                    {motionDetected && <span className="ml-1">· {stepCount} steps detected</span>}
+                  </div>
                 </>
               ) : (
                 <>
                   <div className="font-semibold">{headingLabel || "Follow the line"}</div>
                   <div className="text-xs text-muted-foreground">
                     ≈ {distanceToNext.toFixed(0)} steps to {focused?.name}
-                    {walking && (
-                      <span className="ml-1">
-                        · {motionDetected ? `${stepCount} steps detected` : "waiting for movement…"}
-                      </span>
-                    )}
+                    {motionDetected
+                      ? <span className="ml-1">· {stepCount} steps detected</span>
+                      : <span className="ml-1">· tracking your motion…</span>}
                   </div>
                 </>
               )}
             </div>
-            {arrived ? (
+            {arrived && focused?.isCheckout ? (
+              <Link
+                to="/trips/$tripId"
+                params={{ tripId }}
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Finish
+              </Link>
+            ) : arrived ? (
               <Link
                 to="/store/$tripId/scan"
                 params={{ tripId }}
@@ -353,14 +367,7 @@ function Nav() {
               >
                 Scan
               </Link>
-            ) : nextIdx < 0 ? null : (
-              <button
-                onClick={() => setWalking((w) => !w)}
-                className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-              >
-                {walking ? <><Pause className="h-4 w-4" /> Pause</> : <><Play className="h-4 w-4" /> {arc === 0 ? "Start" : "Walk"}</>}
-              </button>
-            )}
+            ) : null}
           </div>
 
           {nextIdx >= 0 && focused && (
