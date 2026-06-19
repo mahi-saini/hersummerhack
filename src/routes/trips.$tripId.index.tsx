@@ -112,17 +112,17 @@ function TripDashboard() {
 
       <div className="space-y-3">
         {recCount === 0 && (
-          <button
-            className="flex w-full items-center justify-between rounded-2xl bg-primary p-5 text-left text-primary-foreground shadow-lg disabled:opacity-60"
-            onClick={() => gen.mutate()}
-            disabled={gen.isPending || !products.data}
+          <Link
+            to="/trips/$tripId/preparing"
+            params={{ tripId }}
+            className="flex w-full items-center justify-between rounded-2xl bg-primary p-5 text-left text-primary-foreground shadow-lg"
           >
             <div>
-              <div className="font-semibold">{gen.isPending ? "Curating your matches…" : "Generate my matches"}</div>
-              <div className="text-xs opacity-80">From {products.data?.length ?? "…"} pieces of gear</div>
+              <div className="font-semibold">Preparing your matches…</div>
+              <div className="text-xs opacity-80">Tap to resume from {products.data?.length ?? "…"} pieces of gear</div>
             </div>
             <Sparkles className="h-6 w-6" />
-          </button>
+          </Link>
         )}
 
         {recCount > 0 && (
