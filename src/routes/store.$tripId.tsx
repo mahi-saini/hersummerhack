@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { useTrip } from "@/lib/trip-store";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { MapPin, Navigation, ScanLine } from "lucide-react";
 import { useState } from "react";
 
@@ -13,6 +13,7 @@ const STORE = { name: "TrailMate Flagship · Zürich", lat: 47.3769, lng: 8.5417
 
 function StoreHub() {
   const { tripId } = useParams({ from: "/store/$tripId" });
+  const navigate = useNavigate();
   const trip = useTrip(tripId);
   const [status, setStatus] = useState<"idle" | "checking" | "verified" | "denied">("idle");
   const [distance, setDistance] = useState<number | null>(null);
@@ -54,7 +55,10 @@ function StoreHub() {
               {status === "checking" ? "Checking…" : "Check my location"}
             </button>
             <button
-              onClick={() => setStatus("verified")}
+              onClick={() => {
+                setStatus("verified");
+                navigate({ to: "/store/$tripId/nav", params: { tripId } });
+              }}
               className="flex-1 rounded-xl border border-border p-3 text-sm text-muted-foreground"
             >
               Skip
