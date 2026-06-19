@@ -130,20 +130,23 @@ function TripDashboard() {
         )}
 
         {picksCount > 0 && (
+          <Action
+            to="/trips/$tripId/packing"
+            params={{ tripId }}
+            icon={<ListChecks className="h-5 w-5" />}
+            title="Packing list & sizes"
+            subtitle="AI groups & checks store stock"
+          />
+        )}
+
+        {recCount > 0 && (
           <>
-            <Action
-              to="/trips/$tripId/packing"
-              params={{ tripId }}
-              icon={<ListChecks className="h-5 w-5" />}
-              title="Packing list & sizes"
-              subtitle="AI groups & checks store stock"
-            />
             <Action
               to="/store/$tripId"
               params={{ tripId }}
               icon={<MapPin className="h-5 w-5" />}
               title="I'm at the store"
-              subtitle="Guided route through the aisles"
+              subtitle={picksCount > 0 ? "Guided route through the aisles" : "Preview the route from your recommendations"}
             />
             <Action
               to="/store/$tripId/scan"

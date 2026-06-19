@@ -39,62 +39,65 @@ function StoreHub() {
         <div className="mt-1 text-xs opacity-80">Trip: {trip?.name}</div>
       </div>
 
-      {status !== "verified" ? (
-        <div className="rounded-2xl border border-border bg-card p-5">
+      {status !== "verified" && (
+        <div className="mb-4 rounded-2xl border border-border bg-card p-5">
           <div className="mb-2 font-semibold">Are you at the store?</div>
           <p className="mb-4 text-xs text-muted-foreground">
-            We use your location once to confirm. You can also continue without checking — useful for demos.
+            Optional — confirm your location for a distance check. You can use the route map either way.
           </p>
-          <button
-            onClick={check}
-            className="w-full rounded-xl bg-emerald-600 p-3 font-semibold text-white"
-            disabled={status === "checking"}
-          >
-            {status === "checking" ? "Checking…" : "Check my location"}
-          </button>
-          <button
-            onClick={() => setStatus("verified")}
-            className="mt-2 w-full rounded-xl border border-border p-3 text-sm text-muted-foreground"
-          >
-            I'm here — skip check
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={check}
+              className="flex-1 rounded-xl bg-emerald-600 p-3 text-sm font-semibold text-white"
+              disabled={status === "checking"}
+            >
+              {status === "checking" ? "Checking…" : "Check my location"}
+            </button>
+            <button
+              onClick={() => setStatus("verified")}
+              className="flex-1 rounded-xl border border-border p-3 text-sm text-muted-foreground"
+            >
+              Skip
+            </button>
+          </div>
           {status === "denied" && (
-            <div className="mt-3 text-xs text-rose-600">Couldn't read location. You can skip the check.</div>
+            <div className="mt-3 text-xs text-rose-600">Couldn't read location. Tiles below still work.</div>
           )}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {distance !== null && (
-            <div className="rounded-xl bg-emerald-50 p-3 text-xs text-emerald-800">
-              You're {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`} from the store.
-            </div>
-          )}
-          <Tile
-            to="/store/$tripId/nav"
-            params={{ tripId }}
-            color="bg-sky-600"
-            icon={<Navigation className="h-5 w-5" />}
-            title="Guided route"
-            subtitle="Optimized path through your picks"
-          />
-          <Tile
-            to="/store/$tripId/scan"
-            params={{ tripId }}
-            color="bg-slate-700"
-            icon={<ScanLine className="h-5 w-5" />}
-            title="Scan a product"
-            subtitle="Confirm or ask about anything you pick up"
-          />
-          <Tile
-            to="/store/$tripId/ar"
-            params={{ tripId }}
-            color="bg-emerald-600"
-            icon={<MapPin className="h-5 w-5" />}
-            title="AR shelf highlight"
-            subtitle="MatrixScan AR: green = on your list"
-          />
         </div>
       )}
+
+      {status === "verified" && distance !== null && (
+        <div className="mb-3 rounded-xl bg-emerald-50 p-3 text-xs text-emerald-800">
+          You're {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`} from the store.
+        </div>
+      )}
+
+      <div className="space-y-3">
+        <Tile
+          to="/store/$tripId/nav"
+          params={{ tripId }}
+          color="bg-sky-600"
+          icon={<Navigation className="h-5 w-5" />}
+          title="Guided route"
+          subtitle="Optimized path through your picks"
+        />
+        <Tile
+          to="/store/$tripId/scan"
+          params={{ tripId }}
+          color="bg-slate-700"
+          icon={<ScanLine className="h-5 w-5" />}
+          title="Scan a product"
+          subtitle="Confirm or ask about anything you pick up"
+        />
+        <Tile
+          to="/store/$tripId/ar"
+          params={{ tripId }}
+          color="bg-emerald-600"
+          icon={<MapPin className="h-5 w-5" />}
+          title="AR shelf highlight"
+          subtitle="MatrixScan AR: green = on your list"
+        />
+      </div>
     </AppShell>
   );
 }
