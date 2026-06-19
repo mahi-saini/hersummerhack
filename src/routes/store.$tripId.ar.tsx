@@ -1,5 +1,5 @@
 import { AppShell } from "@/components/AppShell";
-import { useProducts, byCode, groupByProductId } from "@/lib/products";
+import { useProducts, groupByProductId } from "@/lib/products";
 import { useTrip, updateTrip } from "@/lib/trip-store";
 import { ensureScanditContext } from "@/lib/scandit";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
@@ -28,22 +28,10 @@ function AR() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [spotted, setSpotted] = useState<Set<string>>(new Set());
-  const [lastSeen, setLastSeen] = useState<{ code: string; status: "pick" | "catalog" | "unknown" } | null>(null);
-
-  // Map pick product_ids -> set of product_codes (variants) we should highlight
-  const pickCodes = useMemo(() => {
-    if (!products.data || !trip?.picks) return new Set<string>();
-    const picksSet = new Set(trip.picks);
-    return new Set(
-      products.data.filter((p) => picksSet.has(p.product_id)).map((p) => p.product_code),
-    );
-  }, [products.data, trip?.picks]);
-
-  // Catalog set for "known product but not a pick"
-  const catalogCodes = useMemo(() => {
-    if (!products.data) return new Set<string>();
-    return new Set(products.data.map((p) => p.product_code));
-  }, [products.data]);
+  const [lastSeen, setLastSeen] = useState<
+    | { code: string; status: "pick" | "catalog" | "unknown"; name?: string }
+    | null
+  >(null);
 
   // Picks for the checklist UI
   const pickGroups = useMemo(() => {
@@ -56,15 +44,21 @@ function AR() {
       : never;
   }, [products.data, trip?.picks]);
 
-  // Refs so the highlight callback (created once) always sees latest data
-  const pickCodesRef = useRef(pickCodes);
-  const catalogCodesRef = useRef(catalogCodes);
+  // Refs so the highlight callback (created once) always sees latest data.
+  // We resolve picks INSIDE the callback by code -> product -> product_id,
+  // which is robust no matter what shape `trip.picks` ends up in.
+  const productsRef = useRef(products.data);
+  const pickIdsRef = useRef<Set<string>>(new Set());
+  const pickCodesRef = useRef<Set<string>>(new Set());
   const tripRef = useRef(trip);
   useEffect(() => {
-    pickCodesRef.current = pickCodes;
-    catalogCodesRef.current = catalogCodes;
+    productsRef.current = products.data;
+    const picks = new Set(trip?.picks ?? []);
+    pickIdsRef.current = picks;
+    // Treat picks as both product_ids AND raw product_codes for safety.
+    pickCodesRef.current = new Set(trip?.picks ?? []);
     tripRef.current = trip;
-  }, [pickCodes, catalogCodes, trip]);
+  }, [products.data, trip]);
 
   useEffect(() => {
     if (!products.data || !trip) return;
@@ -104,25 +98,37 @@ function AR() {
 
         view.highlightProvider = {
           highlightForBarcode: async (barcode: Barcode, callback: (h: any) => void) => {
-            const code = barcode.data ?? "";
-            const isPick = pickCodesRef.current.has(code);
-            const inCatalog = catalogCodesRef.current.has(code);
+            const code = (barcode.data ?? "").trim();
+            const allProducts = productsRef.current ?? [];
+            const product = allProducts.find((p) => p.product_code === code);
+            const inCatalog = !!product;
+            // A scan is a "pick" if any of: its product_id is on the list,
+            // its raw product_code is on the list, OR any variant of the same
+            // product_id is on the list.
+            const isPick =
+              (product && pickIdsRef.current.has(product.product_id)) ||
+              pickCodesRef.current.has(code) ||
+              false;
 
-            setLastSeen({ code, status: isPick ? "pick" : inCatalog ? "catalog" : "unknown" });
+            // eslint-disable-next-line no-console
+            console.log("[AR] scanned", { code, isPick, inCatalog, name: product?.name });
 
-            if (isPick) {
-              const product = byCode(products.data!, code);
-              if (product) {
-                setSpotted((prev) => {
-                  if (prev.has(product.product_id)) return prev;
-                  const next = new Set(prev);
-                  next.add(product.product_id);
-                  const confirmed = new Set(tripRef.current?.confirmedCodes ?? []);
-                  confirmed.add(product.product_code);
-                  updateTrip(tripId, { confirmedCodes: [...confirmed] });
-                  return next;
-                });
-              }
+            setLastSeen({
+              code,
+              status: isPick ? "pick" : inCatalog ? "catalog" : "unknown",
+              name: product?.name,
+            });
+
+            if (isPick && product) {
+              setSpotted((prev) => {
+                if (prev.has(product.product_id)) return prev;
+                const next = new Set(prev);
+                next.add(product.product_id);
+                const confirmed = new Set(tripRef.current?.confirmedCodes ?? []);
+                confirmed.add(product.product_code);
+                updateTrip(tripId, { confirmedCodes: [...confirmed] });
+                return next;
+              });
               const hl = BarcodeArCircleHighlight.create(barcode, BarcodeArCircleHighlightPreset.Dot);
               hl.brush = pickBrush;
               hl.isPulsing = true;
@@ -185,7 +191,12 @@ function AR() {
             {lastSeen && (
               <div className="pointer-events-none absolute inset-x-3 bottom-3 rounded-xl bg-black/70 px-3 py-2 text-[11px] text-white backdrop-blur">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate font-mono">{lastSeen.code}</span>
+                  <div className="min-w-0 flex-1">
+                    {lastSeen.name && (
+                      <div className="truncate text-[12px] font-semibold">{lastSeen.name}</div>
+                    )}
+                    <div className="truncate font-mono opacity-70">{lastSeen.code}</div>
+                  </div>
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
                       lastSeen.status === "pick"
@@ -202,6 +213,11 @@ function AR() {
                       : "Unknown code"}
                   </span>
                 </div>
+                {found > 0 && (
+                  <div className="mt-1 text-[11px] font-semibold text-emerald-300">
+                    {found} item{found === 1 ? "" : "s"} from your list found
+                  </div>
+                )}
               </div>
             )}
           </>
