@@ -205,18 +205,34 @@ function Scan() {
 
       {product && (
         <div className="mt-4 space-y-4">
-          <div
-            className={`rounded-2xl border p-4 ${
+          <button
+            type="button"
+            onClick={() => setShowFit((v) => !v)}
+            className={`w-full rounded-2xl border p-4 text-left transition ${
               isOnList ? "border-emerald-400 bg-emerald-50" : "border-sky-300 bg-sky-50"
             }`}
           >
-            <div
-              className={`mb-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase text-white ${
-                isOnList ? "bg-emerald-600" : "bg-sky-600"
-              }`}
-            >
-              {isOnList ? <CheckCircle2 className="h-3 w-3" /> : <ShoppingBag className="h-3 w-3" />}
-              {isOnList ? "On your list" : "New find"}
+            <div className="flex items-start justify-between gap-2">
+              <div
+                className={`mb-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase text-white ${
+                  isOnList ? "bg-emerald-600" : "bg-sky-600"
+                }`}
+              >
+                {isOnList ? <CheckCircle2 className="h-3 w-3" /> : <ShoppingBag className="h-3 w-3" />}
+                {isOnList ? "On your list" : "New find"}
+              </div>
+              {fit && (
+                <div
+                  className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${fitBadgeClass(fit.verdict)}`}
+                >
+                  {fit.verdict === "good" ? <CheckCircle2 className="h-3 w-3" /> :
+                   fit.verdict === "warn" ? <AlertTriangle className="h-3 w-3" /> :
+                   <X className="h-3 w-3" />}
+                  {fit.verdict === "good" ? "Good for your trip" :
+                   fit.verdict === "warn" ? "Check fit" :
+                   "Not for this trip"}
+                </div>
+              )}
             </div>
             <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{product.brand}</div>
             <div className="text-base font-semibold">{product.name}</div>
@@ -226,9 +242,31 @@ function Scan() {
             <div className="mt-1 text-[11px] text-muted-foreground">
               Zone {product.zone} · Aisle {product.aisle} · Stock {product.stock_total}
             </div>
-          </div>
+            <div className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+              <Info className="h-3 w-3" />
+              {showFit ? "Hide" : "Tap to see if this fits your trip"}
+              <ChevronDown className={`h-3 w-3 transition ${showFit ? "rotate-180" : ""}`} />
+            </div>
+          </button>
 
-          {isOnList ? (
+          {showFit && fit && (
+            <div
+              className={`rounded-2xl border p-4 text-sm ${
+                fit.verdict === "good" ? "border-emerald-300 bg-emerald-50 text-emerald-900" :
+                fit.verdict === "warn" ? "border-amber-300 bg-amber-50 text-amber-900" :
+                "border-rose-300 bg-rose-50 text-rose-900"
+              }`}
+            >
+              <div className="mb-1 font-semibold">{fit.headline}</div>
+              <ul className="list-disc space-y-1 pl-5 text-xs">
+                {fit.reasons.map((r, i) => <li key={i}>{r}</li>)}
+              </ul>
+              <div className="mt-2 text-[11px] opacity-80">
+                Based on your trip: {trip?.country || "—"}, {trip?.month || "—"}, {trip?.weather || "any weather"}
+                {trip?.activities?.length ? ` · ${trip.activities.join(", ")}` : ""}
+              </div>
+            </div>
+          )}
             <div className="space-y-2">
               <div className="px-1 text-sm font-semibold">Already on your list! Ready to buy this?</div>
               <button
