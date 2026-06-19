@@ -21,11 +21,11 @@ function Nav() {
   // Source product ids: swiped picks first; fall back to AI recommendations
   // so the map is still useful before the user has finished swiping.
   const sourceIds = useMemo(() => {
-    const picks = trip?.picks ?? [];
+    const picks = normalizeProductIds((trip as any)?.picks ?? (trip as any)?.matches ?? []);
     if (picks.length) return { ids: picks, fromPicks: true };
-    const recs = (trip?.recommendations ?? []).map((r) => r.product_id);
+    const recs = normalizeProductIds((trip as any)?.recommendations ?? []);
     return { ids: recs, fromPicks: false };
-  }, [trip?.picks, trip?.recommendations]);
+  }, [trip]);
 
   const resolved = useMemo(
     () => sourceIds.ids.map((pid) => groups.get(pid)).filter(Boolean) as any[],
@@ -64,7 +64,11 @@ function Nav() {
 
   return (
     <AppShell title="Your route" back={`/store/${tripId}`}>
-      {ordered.length === 0 ? (
+      {!trip || products.isLoading ? (
+        <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+          Loading your route…
+        </div>
+      ) : ordered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
           No products yet. Go back and generate matches or swipe recommendations first.
         </div>
@@ -129,4 +133,16 @@ function Nav() {
       )}
     </AppShell>
   );
+}
+
+function normalizeProductIds(items: unknown[]): string[] {
+  const ids = items
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object" && "product_id" in item) return String((item as { product_id?: unknown }).product_id ?? "");
+      return "";
+    })
+    .map((id) => id.trim())
+    .filter(Boolean);
+  return Array.from(new Set(ids));
 }
