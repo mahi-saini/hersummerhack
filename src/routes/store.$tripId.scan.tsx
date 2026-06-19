@@ -85,6 +85,9 @@ function Scan() {
 
   const product = scanned && products.data ? byCode(products.data, scanned) : null;
   const isOnList = !!(product && trip?.picks?.includes(product.product_id));
+  const [showFit, setShowFit] = useState(false);
+  useEffect(() => { setShowFit(false); }, [scanned]);
+  const fit = useMemo(() => (product && trip ? assessFit(product, trip) : null), [product, trip]);
 
   async function resumeScanning() {
     setScanned(null);
