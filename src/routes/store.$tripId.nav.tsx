@@ -129,10 +129,12 @@ function Nav() {
             {ordered.map((g, i) => {
               const done = isConfirmed(g);
               const zone = ZONE_INFO[g.zone];
+              const isFocus = i === focusIdx;
               return (
                 <li
                   key={g.product_id}
-                  className={`flex gap-3 rounded-xl border bg-card p-3 ${done ? "border-emerald-300 bg-emerald-50/40" : "border-border"}`}
+                  onClick={() => setSelected(i === selected ? null : i)}
+                  className={`flex cursor-pointer gap-3 rounded-xl border bg-card p-3 transition ${done ? "border-emerald-300 bg-emerald-50/40" : isFocus ? "border-primary/60 bg-primary/5 ring-2 ring-primary/30" : "border-border hover:border-primary/30"}`}
                 >
                   <div
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
