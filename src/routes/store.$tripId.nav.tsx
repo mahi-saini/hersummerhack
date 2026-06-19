@@ -155,10 +155,8 @@ function Nav() {
     const advance = (delta: number) => {
       setArc((prev) => {
         const next = Math.min(prev + delta, targetArc);
-        if (Math.abs(next - targetArc) < ARRIVE_RADIUS) {
-          setWalking(false);
-          return targetArc;
-        }
+        // Clamp at the pin but keep `walking` true so we auto-resume
+        // toward the next stop as soon as the user scans/skips.
         return next;
       });
     };
