@@ -218,7 +218,7 @@ function Wizard({ hasTrips, onCancel }: { hasTrips: boolean; onCancel: () => voi
   function finish() {
     const trip: Trip = { ...t, id: newTripId(), createdAt: Date.now() };
     saveTrip(trip);
-    navigate({ to: "/trips/$tripId", params: { tripId: trip.id } });
+    navigate({ to: "/trips/$tripId/preparing", params: { tripId: trip.id } });
   }
 
   return (
