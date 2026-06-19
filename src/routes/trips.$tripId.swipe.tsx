@@ -42,17 +42,17 @@ function SwipePage() {
   }
 
   return (
-    <AppShell title="Swipe your gear" back={`/trips/${tripId}`}>
+    <AppShell title="Your matches" back={`/trips/${tripId}`}>
       {!current ? (
-        <div className="rounded-xl border border-dashed border-border p-8 text-center">
-          <div className="mb-2 text-lg font-semibold">All done!</div>
+        <div className="rounded-3xl border border-dashed border-border p-8 text-center">
+          <div className="font-display mb-2 text-2xl">It's a wrap.</div>
           <div className="mb-4 text-sm text-muted-foreground">
-            You picked {trip?.picks?.length ?? 0} items.
+            You matched with {trip?.picks?.length ?? 0} pieces of gear.
           </div>
           <Link
             to="/trips/$tripId"
             params={{ tripId }}
-            className="inline-block rounded-xl bg-emerald-600 px-5 py-2.5 font-semibold text-white"
+            className="inline-block rounded-2xl bg-primary px-5 py-3 font-semibold text-primary-foreground"
           >
             Back to trip
           </Link>
@@ -70,19 +70,21 @@ function SwipePage() {
           </div>
           <div className="mt-6 flex items-center justify-center gap-6">
             <button
-              className="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-card text-rose-500 shadow"
+              className="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow"
               onClick={() => decide(false)}
+              aria-label="Skip"
             >
               <X className="h-7 w-7" />
             </button>
-            <div className="text-xs uppercase tracking-widest text-muted-foreground">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
               {idx + 1} / {queue.length}
             </div>
             <button
-              className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow"
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg"
               onClick={() => decide(true)}
+              aria-label="Match"
             >
-              <Heart className="h-7 w-7" />
+              <Heart className="h-7 w-7 fill-current" />
             </button>
           </div>
         </>
@@ -117,11 +119,11 @@ function CardBody({ group, reason }: { group: any; reason: string }) {
     <div className="flex h-full flex-col">
       <ProductHero group={group} className="rounded-b-none rounded-t-3xl" />
       <div className="flex-1 overflow-auto p-4">
-        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{group.brand}</div>
-        <div className="text-lg font-semibold leading-tight">{group.name}</div>
-        <div className="mt-1 text-sm text-emerald-700">CHF {group.price_chf}</div>
-        <div className="mt-3 rounded-lg bg-emerald-50 p-3 text-xs italic text-emerald-900">
-          “{reason}”
+        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{group.brand}</div>
+        <div className="font-display text-2xl leading-tight">{group.name}</div>
+        <div className="mt-1 text-sm font-semibold text-primary">CHF {group.price_chf}</div>
+        <div className="mt-3 rounded-xl bg-secondary/10 p-3 text-xs italic text-foreground/80">
+          "{reason}"
         </div>
         <div className="mt-3 flex flex-wrap gap-1">
           {chips.map((c) => (
@@ -164,15 +166,15 @@ function SwipeCard({
     >
       <motion.div
         style={{ opacity: likeOpacity }}
-        className="absolute left-4 top-4 z-10 rounded-md border-4 border-emerald-500 px-3 py-1 text-xl font-extrabold text-emerald-500"
+        className="absolute left-4 top-4 z-10 rounded-md border-4 border-primary px-3 py-1 text-xl font-extrabold text-primary"
       >
-        KEEP
+        MATCH
       </motion.div>
       <motion.div
         style={{ opacity: nopeOpacity }}
-        className="absolute right-4 top-4 z-10 rounded-md border-4 border-rose-500 px-3 py-1 text-xl font-extrabold text-rose-500"
+        className="absolute right-4 top-4 z-10 rounded-md border-4 border-muted-foreground px-3 py-1 text-xl font-extrabold text-muted-foreground"
       >
-        SKIP
+        PASS
       </motion.div>
       <CardBody group={group} reason={reason} />
     </motion.div>
