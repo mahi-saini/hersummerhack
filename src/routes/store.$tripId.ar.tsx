@@ -1,5 +1,5 @@
 import { AppShell } from "@/components/AppShell";
-import { useProducts, byCode, groupByProductId } from "@/lib/products";
+import { useProducts, groupByProductId } from "@/lib/products";
 import { useTrip, updateTrip } from "@/lib/trip-store";
 import { ensureScanditContext } from "@/lib/scandit";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
