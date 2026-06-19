@@ -1,9 +1,9 @@
 import { AppShell } from "@/components/AppShell";
-import { useProducts, byCode } from "@/lib/products";
+import { useProducts, byCode, groupByProductId } from "@/lib/products";
 import { useTrip, updateTrip } from "@/lib/trip-store";
 import { ensureScanditContext, Camera, FrameSourceState, DataCaptureView } from "@/lib/scandit";
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarcodeCapture,
   BarcodeCaptureSettings,
@@ -11,7 +11,7 @@ import {
   Symbology,
   type BarcodeCaptureSession,
 } from "@scandit/web-datacapture-barcode";
-import { CheckCircle2, ListPlus, ShoppingBag, X } from "lucide-react";
+import { CheckCircle2, Circle, ListPlus, ShoppingBag, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/store/$tripId/scan")({
@@ -136,6 +136,38 @@ function Scan() {
     await resumeScanning();
   }
 
+  // ---- Manual list management ----
+  const pickGroups = useMemo(() => {
+    if (!products.data || !trip?.picks) return [];
+    const groups = groupByProductId(products.data);
+    return trip.picks.map((id) => groups.get(id)).filter(Boolean) as any[];
+  }, [products.data, trip?.picks]);
+
+  const confirmedCodes = new Set(trip?.confirmedCodes ?? []);
+  const isGroupChecked = (g: any) =>
+    g.variants.some((v: any) => confirmedCodes.has(v.product_code));
+
+  function toggleCheck(g: any) {
+    const set = new Set(trip?.confirmedCodes ?? []);
+    const codes: string[] = g.variants.map((v: any) => v.product_code);
+    const checked = codes.some((c) => set.has(c));
+    if (checked) {
+      codes.forEach((c) => set.delete(c));
+    } else {
+      // Mark the first variant as confirmed (representative)
+      set.add(codes[0]);
+    }
+    updateTrip(tripId, { confirmedCodes: [...set] });
+  }
+
+  function removeFromList(g: any) {
+    const picks = (trip?.picks ?? []).filter((id) => id !== g.product_id);
+    const codes: string[] = g.variants.map((v: any) => v.product_code);
+    const confirmed = (trip?.confirmedCodes ?? []).filter((c) => !codes.includes(c));
+    updateTrip(tripId, { picks, confirmedCodes: confirmed });
+    toast.success(`Removed ${g.name}`);
+  }
+
   return (
     <AppShell title="Scan" back={`/store/${tripId}`}>
       <div className="relative h-[55vh] w-full overflow-hidden rounded-2xl bg-black">
@@ -234,6 +266,62 @@ function Scan() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {pickGroups.length > 0 && (
+        <div className="mt-6">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Your list
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              Tap to check off · trash to remove
+            </div>
+          </div>
+          <ul className="space-y-2">
+            {pickGroups.map((g) => {
+              const checked = isGroupChecked(g);
+              return (
+                <li
+                  key={g.product_id}
+                  className={`flex items-center gap-3 rounded-xl border p-3 transition ${
+                    checked ? "border-emerald-300 bg-emerald-50" : "border-border bg-card"
+                  }`}
+                >
+                  <button
+                    onClick={() => toggleCheck(g)}
+                    className="shrink-0"
+                    aria-label={checked ? "Uncheck" : "Check off"}
+                  >
+                    {checked ? (
+                      <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                    ) : (
+                      <Circle className="h-6 w-6 text-muted-foreground" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => toggleCheck(g)}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <div className={`truncate text-sm font-semibold ${checked ? "line-through text-muted-foreground" : ""}`}>
+                      {g.name}
+                    </div>
+                    <div className="truncate text-[11px] text-muted-foreground">
+                      {g.brand} · Zone {g.zone} · Aisle {g.aisle}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => removeFromList(g)}
+                    className="shrink-0 rounded-lg p-2 text-muted-foreground hover:bg-rose-50 hover:text-rose-600"
+                    aria-label="Remove from list"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
     </AppShell>
