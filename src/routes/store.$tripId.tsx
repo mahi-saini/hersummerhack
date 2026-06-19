@@ -55,7 +55,10 @@ function StoreHub() {
               {status === "checking" ? "Checking…" : "Check my location"}
             </button>
             <button
-              onClick={() => setStatus("verified")}
+              onClick={() => {
+                setStatus("verified");
+                navigate({ to: "/store/$tripId/nav", params: { tripId } });
+              }}
               className="flex-1 rounded-xl border border-border p-3 text-sm text-muted-foreground"
             >
               Skip
