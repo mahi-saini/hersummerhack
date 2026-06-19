@@ -2,10 +2,13 @@ import { AppShell } from "@/components/AppShell";
 import { ProductHero, specChips } from "@/components/ProductCard";
 import { groupByProductId, useProducts } from "@/lib/products";
 import { useTrip, updateTrip } from "@/lib/trip-store";
+import { generatePackingList } from "@/lib/ai.functions";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
-import { useMemo, useState } from "react";
-import { MapPin } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MapPin, Sparkles, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 
 export const Route = createFileRoute("/trips/$tripId/swipe")({
