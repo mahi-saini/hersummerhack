@@ -63,14 +63,22 @@ export function useTrips() {
   return trips;
 }
 
-export function useTrip(id: string | undefined): Trip | undefined {
-  const [trip, setTrip] = useState<Trip | undefined>();
+export function useTrip(id: string | undefined): { trip: Trip | undefined; loaded: boolean } {
+  const [state, setState] = useState<{ trip: Trip | undefined; loaded: boolean }>({
+    trip: undefined,
+    loaded: false,
+  });
   useEffect(() => {
     if (!id) return;
-    const refresh = () => setTrip(getTrip(id));
+    const refresh = () => setState({ trip: getTrip(id), loaded: true });
     refresh();
     window.addEventListener("trailmate:trips-changed", refresh);
-    return () => window.removeEventListener("trailmate:trips-changed", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("trailmate:trips-changed", refresh);
+      window.removeEventListener("storage", refresh);
+    };
   }, [id]);
-  return trip;
+  return state;
 }
+
