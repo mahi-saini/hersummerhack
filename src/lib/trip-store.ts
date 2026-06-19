@@ -63,14 +63,11 @@ export function useTrips() {
   return trips;
 }
 
-export function useTrip(id: string | undefined): { trip: Trip | undefined; loaded: boolean } {
-  const [state, setState] = useState<{ trip: Trip | undefined; loaded: boolean }>({
-    trip: undefined,
-    loaded: false,
-  });
+export function useTrip(id: string | undefined): Trip | undefined {
+  const [trip, setTrip] = useState<Trip | undefined>();
   useEffect(() => {
     if (!id) return;
-    const refresh = () => setState({ trip: getTrip(id), loaded: true });
+    const refresh = () => setTrip(getTrip(id));
     refresh();
     window.addEventListener("trailmate:trips-changed", refresh);
     window.addEventListener("storage", refresh);
@@ -79,6 +76,22 @@ export function useTrip(id: string | undefined): { trip: Trip | undefined; loade
       window.removeEventListener("storage", refresh);
     };
   }, [id]);
-  return state;
+  return trip;
 }
+
+export function useTripStatus(id: string | undefined): "loading" | "found" | "missing" {
+  const [status, setStatus] = useState<"loading" | "found" | "missing">("loading");
+  useEffect(() => {
+    if (!id) {
+      setStatus("missing");
+      return;
+    }
+    const refresh = () => setStatus(getTrip(id) ? "found" : "missing");
+    refresh();
+    window.addEventListener("trailmate:trips-changed", refresh);
+    return () => window.removeEventListener("trailmate:trips-changed", refresh);
+  }, [id]);
+  return status;
+}
+
 
