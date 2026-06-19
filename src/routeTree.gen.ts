@@ -16,6 +16,7 @@ import { Route as TripsTripIdRouteImport } from './routes/trips.$tripId'
 import { Route as StoreTripIdRouteImport } from './routes/store.$tripId'
 import { Route as ProductCodeRouteImport } from './routes/product.$code'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as TripsTripIdIndexRouteImport } from './routes/trips.$tripId.index'
 import { Route as TripsTripIdSwipeRouteImport } from './routes/trips.$tripId.swipe'
 import { Route as TripsTripIdPackingRouteImport } from './routes/trips.$tripId.packing'
 import { Route as StoreTripIdScanRouteImport } from './routes/store.$tripId.scan'
@@ -57,6 +58,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TripsTripIdIndexRoute = TripsTripIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TripsTripIdRoute,
+} as any)
 const TripsTripIdSwipeRoute = TripsTripIdSwipeRouteImport.update({
   id: '/swipe',
   path: '/swipe',
@@ -96,13 +102,13 @@ export interface FileRoutesByFullPath {
   '/store/$tripId/scan': typeof StoreTripIdScanRoute
   '/trips/$tripId/packing': typeof TripsTripIdPackingRoute
   '/trips/$tripId/swipe': typeof TripsTripIdSwipeRoute
+  '/trips/$tripId/': typeof TripsTripIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/chat': typeof ApiChatRoute
   '/product/$code': typeof ProductCodeRoute
   '/store/$tripId': typeof StoreTripIdRouteWithChildren
-  '/trips/$tripId': typeof TripsTripIdRouteWithChildren
   '/trips/new': typeof TripsNewRoute
   '/trips': typeof TripsIndexRoute
   '/store/$tripId/ar': typeof StoreTripIdArRoute
@@ -110,6 +116,7 @@ export interface FileRoutesByTo {
   '/store/$tripId/scan': typeof StoreTripIdScanRoute
   '/trips/$tripId/packing': typeof TripsTripIdPackingRoute
   '/trips/$tripId/swipe': typeof TripsTripIdSwipeRoute
+  '/trips/$tripId': typeof TripsTripIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,6 +132,7 @@ export interface FileRoutesById {
   '/store/$tripId/scan': typeof StoreTripIdScanRoute
   '/trips/$tripId/packing': typeof TripsTripIdPackingRoute
   '/trips/$tripId/swipe': typeof TripsTripIdSwipeRoute
+  '/trips/$tripId/': typeof TripsTripIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,13 +149,13 @@ export interface FileRouteTypes {
     | '/store/$tripId/scan'
     | '/trips/$tripId/packing'
     | '/trips/$tripId/swipe'
+    | '/trips/$tripId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/api/chat'
     | '/product/$code'
     | '/store/$tripId'
-    | '/trips/$tripId'
     | '/trips/new'
     | '/trips'
     | '/store/$tripId/ar'
@@ -155,6 +163,7 @@ export interface FileRouteTypes {
     | '/store/$tripId/scan'
     | '/trips/$tripId/packing'
     | '/trips/$tripId/swipe'
+    | '/trips/$tripId'
   id:
     | '__root__'
     | '/'
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/store/$tripId/scan'
     | '/trips/$tripId/packing'
     | '/trips/$tripId/swipe'
+    | '/trips/$tripId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -232,6 +242,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trips/$tripId/': {
+      id: '/trips/$tripId/'
+      path: '/'
+      fullPath: '/trips/$tripId/'
+      preLoaderRoute: typeof TripsTripIdIndexRouteImport
+      parentRoute: typeof TripsTripIdRoute
+    }
     '/trips/$tripId/swipe': {
       id: '/trips/$tripId/swipe'
       path: '/swipe'
@@ -289,11 +306,13 @@ const StoreTripIdRouteWithChildren = StoreTripIdRoute._addFileChildren(
 interface TripsTripIdRouteChildren {
   TripsTripIdPackingRoute: typeof TripsTripIdPackingRoute
   TripsTripIdSwipeRoute: typeof TripsTripIdSwipeRoute
+  TripsTripIdIndexRoute: typeof TripsTripIdIndexRoute
 }
 
 const TripsTripIdRouteChildren: TripsTripIdRouteChildren = {
   TripsTripIdPackingRoute: TripsTripIdPackingRoute,
   TripsTripIdSwipeRoute: TripsTripIdSwipeRoute,
+  TripsTripIdIndexRoute: TripsTripIdIndexRoute,
 }
 
 const TripsTripIdRouteWithChildren = TripsTripIdRoute._addFileChildren(
