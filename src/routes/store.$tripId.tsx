@@ -13,6 +13,7 @@ const STORE = { name: "TrailMate Flagship · Zürich", lat: 47.3769, lng: 8.5417
 
 function StoreHub() {
   const { tripId } = useParams({ from: "/store/$tripId" });
+  const navigate = useNavigate();
   const trip = useTrip(tripId);
   const [status, setStatus] = useState<"idle" | "checking" | "verified" | "denied">("idle");
   const [distance, setDistance] = useState<number | null>(null);
