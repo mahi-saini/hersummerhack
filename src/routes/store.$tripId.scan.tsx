@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { useProducts, byCode } from "@/lib/products";
 import { useTrip, updateTrip } from "@/lib/trip-store";
-import { ensureScandit, DataCaptureContext, Camera, FrameSourceState } from "@/lib/scandit";
+import { ensureScanditContext, Camera, FrameSourceState, DataCaptureView } from "@/lib/scandit";
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -9,10 +9,8 @@ import {
   BarcodeCaptureSettings,
   BarcodeCaptureOverlay,
   Symbology,
-  symbologySettingsFromJSON,
   type BarcodeCaptureSession,
 } from "@scandit/web-datacapture-barcode";
-import { DataCaptureView } from "@scandit/web-datacapture-core";
 import { CheckCircle2, MessageSquare, X } from "lucide-react";
 
 export const Route = createFileRoute("/store/$tripId/scan")({
@@ -29,6 +27,7 @@ function Scan() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scanned, setScanned] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const expectedPick = Route.useSearch().expect;
 
   useEffect(() => {
     let cleanup = () => {};
@@ -36,11 +35,9 @@ function Scan() {
 
     (async () => {
       try {
-        await ensureScandit();
+        const context = await ensureScanditContext();
         if (cancelled) return;
-        await DataCaptureContext.forLicenseKey(""); // already configured
-        const context = DataCaptureContext.sharedInstance;
-        const camera = Camera.default;
+        const camera = Camera.pickBestGuess();
         const settings = new BarcodeCaptureSettings();
         settings.enableSymbologies([
           Symbology.EAN13UPCA,
@@ -87,7 +84,6 @@ function Scan() {
   }, []);
 
   const product = scanned && products.data ? byCode(products.data, scanned) : null;
-  const expectedPick = Route.useSearch().expect;
 
   function confirmScan() {
     if (!product) return;
