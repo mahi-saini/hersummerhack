@@ -17,8 +17,13 @@ export const Route = createFileRoute("/trips/$tripId/")({
 function TripDashboard() {
   const { tripId } = useParams({ from: "/trips/$tripId/" });
   const trip = useTrip(tripId);
+  const status = useTripStatus(tripId);
   const products = useProducts();
   const fn = useServerFn(generateChecklist);
+
+  if (typeof window !== "undefined") {
+    console.log("[TripDashboard]", { tripId, status, hasTrip: !!trip });
+  }
 
   const gen = useMutation({
     mutationFn: async () => {
@@ -52,7 +57,25 @@ function TripDashboard() {
     onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
   });
 
-  if (!trip) return <AppShell title="Trip" back="/trips">Loading…</AppShell>;
+  if (status === "loading") {
+    return <AppShell title="Trip" back="/">Loading…</AppShell>;
+  }
+  if (status === "missing" || !trip) {
+    return (
+      <AppShell title="Trip not found" back="/">
+        <div className="rounded-3xl border border-dashed border-border p-8 text-center">
+          <div className="font-display mb-2 text-2xl">We couldn't find that trip.</div>
+          <div className="mb-4 text-sm text-muted-foreground">
+            It may have been removed from this device.
+          </div>
+          <Link to="/" className="inline-block rounded-2xl bg-primary px-5 py-3 font-semibold text-primary-foreground">
+            Plan a new trip
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
+
 
   const picksCount = trip.picks?.length ?? 0;
   const recCount = trip.recommendations?.length ?? 0;
