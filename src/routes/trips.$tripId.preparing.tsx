@@ -20,6 +20,8 @@ const STAGES = [
   { key: "checklist", label: "Generating your checklist…", Icon: Sparkles },
 ] as const;
 
+const MIN_DURATION_MS = 3000;
+
 function Preparing() {
   const { tripId } = useParams({ from: "/trips/$tripId/preparing" });
   const navigate = useNavigate();
@@ -29,6 +31,7 @@ function Preparing() {
   const fn = useServerFn(generateChecklist);
   const [stageIdx, setStageIdx] = useState(0);
   const ranRef = useRef(false);
+  const startedAtRef = useRef<number>(Date.now());
 
   const gen = useMutation({
     mutationFn: async () => {
