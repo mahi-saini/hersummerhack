@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { useTrip } from "@/lib/trip-store";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { MapPin, Navigation, ScanLine } from "lucide-react";
 import { useState } from "react";
 
