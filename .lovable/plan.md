@@ -1,72 +1,49 @@
-# Plan: "Find Your Perfect Match" home + polished flow
+## Goal
 
-## 1. Theme & design system (Alpine Romance)
+Make the "Scan a product" page the centerpiece of spontaneous shopping: after every successful scan, drive the shopper through a clear yes/no decision that either checks the item off the shopping list or adds it (and optionally checks it off).
 
-Update `src/styles.css` tokens:
-- `--background` deep forest `#0E3B2E` (light surfaces `#F5EFE3` cream)
-- `--primary` warm terracotta `#D97757`
-- `--foreground` near-black `#1A1A1A`
-- Add `--gradient-romance` (forest → terracotta), `--shadow-elegant`, `--radius` 1.25rem
-- Fonts: `Cormorant Garamond` (display, serif) + `Inter` (body) via `<link>` in `__root.tsx`
-- Tagline tokens: italic serif headlines, generous tracking, cream cards on forest.
+## New scan result flow
 
-Refactor `AppShell` and `ProductCard` to use new tokens (no hardcoded emerald/sky).
+After a barcode resolves to a catalog product, show one of two prompts (replacing today's "Confirm / Ask AI / Scan another" buttons).
 
-## 2. Home page = onboarding wizard
+**A. Product IS on the trip's pick list**
 
-Rewrite `src/routes/index.tsx`:
-- **Returning users** (has trips in localStorage): show "Welcome back" hero with last trip card → `Resume` button + secondary `Start a new match` and `All trips` links. (Resume-last-trip behavior.)
-- **First-time / "Start new match"**: render the 5-step wizard inline on the home page.
-  - Steps: Trip basics → When & where → About you → Style & budget → Activities
-  - Swipeable: framer-motion drag + tap-next; progress bar of 5 hearts/peaks at top
-  - Mobile-first: full-viewport card, sticky CTA `Find my match →`, large tap targets (min 48px), one question group per screen
-  - On finish: save trip, navigate to `/trips/$tripId` (dashboard) which then leads to swipe deck.
-- Hero copy: "Find your perfect match for the mountains." Subhead about AI-curated gear.
+> Already on your list! Ready to buy this?
 
-Delete the separate `/trips/new` route (or keep as redirect to `/?new=1`). `/trips` list stays for full history.
+- **Yes, buying it** → add `product_code` to `trip.confirmedCodes` (checks it off the shopping list), show a brief "Checked off" confirmation, then return to scanning.
+- **No, not now** → do nothing, return to scanning.
 
-## 3. Trip dashboard polish (`/trips/$tripId`)
+**B. Product is NOT on the list**
 
-- Replace emerald palette with new tokens
-- Big "Your matches" CTA → swipe deck
-- Cards for: AI checklist, Packing list, In-store mode, Chat about a product
-- Show match progress (X of Y items picked)
+> Ooo this isn't on your list — but it's an excellent choice!
 
-## 4. Swipe deck polish (`/trips/$tripId/swipe`)
+Three options:
+1. **Buy it** → add `product_id` to `trip.picks` AND add `product_code` to `trip.confirmedCodes` (added + checked off).
+2. **Add to list for now** → add `product_id` to `trip.picks` only (added, not checked off).
+3. **Leave it behind** → do nothing, return to scanning.
 
-- "It's a match!" celebratory overlay when liking an item (framer-motion)
-- Bigger product image, brand + price + 2 specs
-- Use DDG image hook (already built); fallback emoji card
-- Bottom bar: ✕ pass · ♥ match · ↶ undo
+After any choice, the camera re-enables so the user can scan the next item without leaving the page.
 
-## 5. In-store experience refinements
+## UI details
 
-- `/store/$tripId`: cleaner zone list with progress chips
-- `/store/$tripId/nav`: highlight current zone on SVG map
-- `/store/$tripId/scan`: Scandit live view, on match show "Perfect match confirmed ♥"
-- `/product/$code`: hero image + streaming chat (already wired) restyled to theme
+- Keep the existing product card (brand, name, color/size, price, zone/aisle) above the action buttons so the user can confirm it's the right item.
+- A small badge at the top of the card indicates the state: green "On your list" for case A, blue "New find" for case B.
+- Buttons are stacked, full-width, with the primary action (Yes / Buy it) in emerald and secondary actions in neutral styling. "Leave behind" is a quiet tertiary button.
+- Toast / inline banner after each action: "Checked off your list", "Added & checked off", "Added to your list", or nothing for "Leave behind".
+- Unknown barcode (not in catalog) keeps today's "Not in catalog" message + Scan again.
+- Remove the auto-navigation to the Guided route map after confirming — the user stays on the scan page to continue scanning.
 
-## 6. Mobile-first guarantees
+## Technical details
 
-- All routes wrap in `max-w-md` container with safe-area padding
-- Sticky bottom CTAs use `pb-[env(safe-area-inset-bottom)]`
-- Touch targets ≥48px, no hover-only affordances
-- Verify at 390x844 with `browser--view_preview`
+- File: `src/routes/store.$tripId.scan.tsx`.
+- Reuse `updateTrip(tripId, { picks, confirmedCodes })` from `src/lib/trip-store.ts`. Use `Set` to dedupe both arrays before saving.
+- Replace the current `confirmScan` + bottom button cluster with a small `<ScanDecision>` block driven by `isOnList = trip.picks?.includes(product.product_id)`.
+- After a decision, reset local `scanned` state to `null` and call `capture.setEnabled(true)` again so the Scandit `BarcodeCapture` instance resumes. Keep `codeDuplicateFilter` so the same item isn't re-prompted instantly.
+- Drop the `expect` search-param branching from the buttons (still fine to highlight a match visually) since the flow no longer routes back to the map.
+- No changes to the Scandit context/camera setup or to the AR shelf page.
 
-## 7. Fix existing routing artifact
+## Out of scope
 
-Remove now-orphan `src/routes/trips.new.tsx` (replaced by home-page wizard). Keep `trips.index.tsx` as the history list.
-
-## 8. Verification
-
-- Build passes
-- Open `/` at 390x844 → wizard visible, swipeable, completes → dashboard
-- Open `/` again with existing trip → "Welcome back" with Resume CTA
-- Smoke-test swipe deck, store map, scanner page renders.
-
-## Technical notes
-
-- All localStorage logic stays in `trip-store.ts`
-- No backend changes; AI gateway + Scandit unchanged
-- New fonts loaded via `<link>` in `__root.tsx` head (per Tailwind v4 rule — no remote `@import`)
-- framer-motion already installed
+- Changes to the shopping-list / picks display elsewhere (it already reads `picks` and `confirmedCodes`).
+- AR shelf flow, guided route, or product detail page.
+- Persisting a "left behind" history.
