@@ -8,7 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, Heart, ListChecks, MapPin, ScanLine, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/trips/$tripId")({
+export const Route = createFileRoute("/trips/$tripId/")({
   head: () => ({ meta: [{ title: "Trip — TrailMate" }] }),
   component: TripDashboard,
 });
