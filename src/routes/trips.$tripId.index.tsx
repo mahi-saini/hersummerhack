@@ -82,7 +82,11 @@ function TripDashboard() {
 
   return (
     <AppShell title={trip.name || "Trip"} back="/">
-      <div className="mb-5 overflow-hidden rounded-3xl bg-gradient-to-br from-secondary to-secondary/80 p-6 text-secondary-foreground shadow-xl">
+      <Link
+        to="/trips/$tripId/edit"
+        params={{ tripId }}
+        className="relative mb-5 block overflow-hidden rounded-3xl bg-gradient-to-br from-secondary to-secondary/80 p-6 text-secondary-foreground shadow-xl transition hover:opacity-95"
+      >
         <div className="text-[10px] uppercase tracking-[0.2em] opacity-70">
           {trip.country} · {trip.month} · {trip.days} days
         </div>
@@ -96,7 +100,10 @@ function TripDashboard() {
             </span>
           ))}
         </div>
-      </div>
+        <div className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur">
+          <Pencil className="h-3.5 w-3.5" />
+        </div>
+      </Link>
 
       <div className="mb-4 grid grid-cols-2 gap-3">
         <Stat label="Cards" value={recCount} />
