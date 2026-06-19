@@ -3,7 +3,7 @@ import { useTrips, deleteTrip } from "@/lib/trip-store";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus, MapPin, Calendar, Trash2 } from "lucide-react";
 
-export const Route = createFileRoute("/trips")({
+export const Route = createFileRoute("/trips/")({
   head: () => ({ meta: [{ title: "Your trips — TrailMate" }] }),
   component: TripsPage,
 });
