@@ -173,14 +173,38 @@ function AR() {
           </div>
         )}
         {!error && (
-          <div className="pointer-events-none absolute inset-x-0 top-3 mx-3 flex items-center justify-between rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur">
-            <span className="inline-flex items-center gap-1.5">
-              <ScanLine className="h-3.5 w-3.5" /> Scan the shelf
-            </span>
-            <span className="font-semibold">
-              {found} / {total} found
-            </span>
-          </div>
+          <>
+            <div className="pointer-events-none absolute inset-x-0 top-3 mx-3 flex items-center justify-between rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur">
+              <span className="inline-flex items-center gap-1.5">
+                <ScanLine className="h-3.5 w-3.5" /> Scan the shelf
+              </span>
+              <span className="font-semibold">
+                {found} / {total} found
+              </span>
+            </div>
+            {lastSeen && (
+              <div className="pointer-events-none absolute inset-x-3 bottom-3 rounded-xl bg-black/70 px-3 py-2 text-[11px] text-white backdrop-blur">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate font-mono">{lastSeen.code}</span>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                      lastSeen.status === "pick"
+                        ? "bg-emerald-500 text-white"
+                        : lastSeen.status === "catalog"
+                        ? "bg-amber-500 text-white"
+                        : "bg-slate-500 text-white"
+                    }`}
+                  >
+                    {lastSeen.status === "pick"
+                      ? "On your list"
+                      : lastSeen.status === "catalog"
+                      ? "In catalog"
+                      : "Unknown code"}
+                  </span>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
