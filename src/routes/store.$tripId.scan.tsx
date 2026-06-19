@@ -405,8 +405,8 @@ function assessFit(p: { name: string; category?: string; tags?: string[]; temp_r
   // Temperature rating
   if (p.temp_rating_c != null) {
     if (climate === "cold" && p.temp_rating_c > 5) { verdict = "bad"; reasons.push(`Rated to ${p.temp_rating_c}°C — too warm-weather for a cold trip.`); }
-    else if (climate === "cold" && p.temp_rating_c > -5) { if (verdict !== "bad") verdict = "warn"; reasons.push(`Rated to ${p.temp_rating_c}°C — borderline for cold conditions; consider warmer.`); }
-    else if (climate === "warm" && p.temp_rating_c < -5) { if (verdict !== "bad") verdict = "warn"; reasons.push(`Rated to ${p.temp_rating_c}°C — likely too warm for a hot-weather trip.`); }
+    else if (climate === "cold" && p.temp_rating_c > -5) { if ((verdict as FitVerdict) !== "bad") verdict = "warn"; reasons.push(`Rated to ${p.temp_rating_c}°C — borderline for cold conditions; consider warmer.`); }
+    else if (climate === "warm" && p.temp_rating_c < -5) { if ((verdict as FitVerdict) !== "bad") verdict = "warn"; reasons.push(`Rated to ${p.temp_rating_c}°C — likely too warm for a hot-weather trip.`); }
     else reasons.push(`Temperature rating ${p.temp_rating_c}°C matches your trip.`);
   } else if (isJacket || isSleep) {
     // No rating — infer from weight & material
