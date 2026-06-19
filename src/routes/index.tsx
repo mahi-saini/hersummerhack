@@ -108,14 +108,11 @@ function WelcomeBack({ trips, onStartNew }: { trips: Trip[]; onStartNew: () => v
   const last = trips[0];
   return (
     <div className="flex min-h-[100dvh] flex-col">
-      <header className="flex items-center justify-between py-4">
+      <header className="flex items-center py-4">
         <div className="flex items-center gap-2">
           <Mountain className="h-5 w-5 text-primary" />
           <span className="text-sm font-semibold tracking-wide">TrailMate</span>
         </div>
-        <Link to="/trips" className="text-xs text-secondary-foreground/70 underline-offset-4 hover:underline">
-          All trips
-        </Link>
       </header>
 
       <div className="mt-4">
