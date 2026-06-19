@@ -9,38 +9,185 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TripsRouteImport } from './routes/trips'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TripsNewRouteImport } from './routes/trips.new'
+import { Route as TripsTripIdRouteImport } from './routes/trips.$tripId'
+import { Route as StoreTripIdRouteImport } from './routes/store.$tripId'
+import { Route as ProductCodeRouteImport } from './routes/product.$code'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as TripsTripIdSwipeRouteImport } from './routes/trips.$tripId.swipe'
+import { Route as TripsTripIdPackingRouteImport } from './routes/trips.$tripId.packing'
+import { Route as StoreTripIdScanRouteImport } from './routes/store.$tripId.scan'
+import { Route as StoreTripIdNavRouteImport } from './routes/store.$tripId.nav'
+import { Route as StoreTripIdArRouteImport } from './routes/store.$tripId.ar'
 
+const TripsRoute = TripsRouteImport.update({
+  id: '/trips',
+  path: '/trips',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TripsNewRoute = TripsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => TripsRoute,
+} as any)
+const TripsTripIdRoute = TripsTripIdRouteImport.update({
+  id: '/$tripId',
+  path: '/$tripId',
+  getParentRoute: () => TripsRoute,
+} as any)
+const StoreTripIdRoute = StoreTripIdRouteImport.update({
+  id: '/store/$tripId',
+  path: '/store/$tripId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductCodeRoute = ProductCodeRouteImport.update({
+  id: '/product/$code',
+  path: '/product/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TripsTripIdSwipeRoute = TripsTripIdSwipeRouteImport.update({
+  id: '/swipe',
+  path: '/swipe',
+  getParentRoute: () => TripsTripIdRoute,
+} as any)
+const TripsTripIdPackingRoute = TripsTripIdPackingRouteImport.update({
+  id: '/packing',
+  path: '/packing',
+  getParentRoute: () => TripsTripIdRoute,
+} as any)
+const StoreTripIdScanRoute = StoreTripIdScanRouteImport.update({
+  id: '/scan',
+  path: '/scan',
+  getParentRoute: () => StoreTripIdRoute,
+} as any)
+const StoreTripIdNavRoute = StoreTripIdNavRouteImport.update({
+  id: '/nav',
+  path: '/nav',
+  getParentRoute: () => StoreTripIdRoute,
+} as any)
+const StoreTripIdArRoute = StoreTripIdArRouteImport.update({
+  id: '/ar',
+  path: '/ar',
+  getParentRoute: () => StoreTripIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/trips': typeof TripsRouteWithChildren
+  '/api/chat': typeof ApiChatRoute
+  '/product/$code': typeof ProductCodeRoute
+  '/store/$tripId': typeof StoreTripIdRouteWithChildren
+  '/trips/$tripId': typeof TripsTripIdRouteWithChildren
+  '/trips/new': typeof TripsNewRoute
+  '/store/$tripId/ar': typeof StoreTripIdArRoute
+  '/store/$tripId/nav': typeof StoreTripIdNavRoute
+  '/store/$tripId/scan': typeof StoreTripIdScanRoute
+  '/trips/$tripId/packing': typeof TripsTripIdPackingRoute
+  '/trips/$tripId/swipe': typeof TripsTripIdSwipeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/trips': typeof TripsRouteWithChildren
+  '/api/chat': typeof ApiChatRoute
+  '/product/$code': typeof ProductCodeRoute
+  '/store/$tripId': typeof StoreTripIdRouteWithChildren
+  '/trips/$tripId': typeof TripsTripIdRouteWithChildren
+  '/trips/new': typeof TripsNewRoute
+  '/store/$tripId/ar': typeof StoreTripIdArRoute
+  '/store/$tripId/nav': typeof StoreTripIdNavRoute
+  '/store/$tripId/scan': typeof StoreTripIdScanRoute
+  '/trips/$tripId/packing': typeof TripsTripIdPackingRoute
+  '/trips/$tripId/swipe': typeof TripsTripIdSwipeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/trips': typeof TripsRouteWithChildren
+  '/api/chat': typeof ApiChatRoute
+  '/product/$code': typeof ProductCodeRoute
+  '/store/$tripId': typeof StoreTripIdRouteWithChildren
+  '/trips/$tripId': typeof TripsTripIdRouteWithChildren
+  '/trips/new': typeof TripsNewRoute
+  '/store/$tripId/ar': typeof StoreTripIdArRoute
+  '/store/$tripId/nav': typeof StoreTripIdNavRoute
+  '/store/$tripId/scan': typeof StoreTripIdScanRoute
+  '/trips/$tripId/packing': typeof TripsTripIdPackingRoute
+  '/trips/$tripId/swipe': typeof TripsTripIdSwipeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/trips'
+    | '/api/chat'
+    | '/product/$code'
+    | '/store/$tripId'
+    | '/trips/$tripId'
+    | '/trips/new'
+    | '/store/$tripId/ar'
+    | '/store/$tripId/nav'
+    | '/store/$tripId/scan'
+    | '/trips/$tripId/packing'
+    | '/trips/$tripId/swipe'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/trips'
+    | '/api/chat'
+    | '/product/$code'
+    | '/store/$tripId'
+    | '/trips/$tripId'
+    | '/trips/new'
+    | '/store/$tripId/ar'
+    | '/store/$tripId/nav'
+    | '/store/$tripId/scan'
+    | '/trips/$tripId/packing'
+    | '/trips/$tripId/swipe'
+  id:
+    | '__root__'
+    | '/'
+    | '/trips'
+    | '/api/chat'
+    | '/product/$code'
+    | '/store/$tripId'
+    | '/trips/$tripId'
+    | '/trips/new'
+    | '/store/$tripId/ar'
+    | '/store/$tripId/nav'
+    | '/store/$tripId/scan'
+    | '/trips/$tripId/packing'
+    | '/trips/$tripId/swipe'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  TripsRoute: typeof TripsRouteWithChildren
+  ApiChatRoute: typeof ApiChatRoute
+  ProductCodeRoute: typeof ProductCodeRoute
+  StoreTripIdRoute: typeof StoreTripIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/trips': {
+      id: '/trips'
+      path: '/trips'
+      fullPath: '/trips'
+      preLoaderRoute: typeof TripsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +195,128 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trips/new': {
+      id: '/trips/new'
+      path: '/new'
+      fullPath: '/trips/new'
+      preLoaderRoute: typeof TripsNewRouteImport
+      parentRoute: typeof TripsRoute
+    }
+    '/trips/$tripId': {
+      id: '/trips/$tripId'
+      path: '/$tripId'
+      fullPath: '/trips/$tripId'
+      preLoaderRoute: typeof TripsTripIdRouteImport
+      parentRoute: typeof TripsRoute
+    }
+    '/store/$tripId': {
+      id: '/store/$tripId'
+      path: '/store/$tripId'
+      fullPath: '/store/$tripId'
+      preLoaderRoute: typeof StoreTripIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/product/$code': {
+      id: '/product/$code'
+      path: '/product/$code'
+      fullPath: '/product/$code'
+      preLoaderRoute: typeof ProductCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trips/$tripId/swipe': {
+      id: '/trips/$tripId/swipe'
+      path: '/swipe'
+      fullPath: '/trips/$tripId/swipe'
+      preLoaderRoute: typeof TripsTripIdSwipeRouteImport
+      parentRoute: typeof TripsTripIdRoute
+    }
+    '/trips/$tripId/packing': {
+      id: '/trips/$tripId/packing'
+      path: '/packing'
+      fullPath: '/trips/$tripId/packing'
+      preLoaderRoute: typeof TripsTripIdPackingRouteImport
+      parentRoute: typeof TripsTripIdRoute
+    }
+    '/store/$tripId/scan': {
+      id: '/store/$tripId/scan'
+      path: '/scan'
+      fullPath: '/store/$tripId/scan'
+      preLoaderRoute: typeof StoreTripIdScanRouteImport
+      parentRoute: typeof StoreTripIdRoute
+    }
+    '/store/$tripId/nav': {
+      id: '/store/$tripId/nav'
+      path: '/nav'
+      fullPath: '/store/$tripId/nav'
+      preLoaderRoute: typeof StoreTripIdNavRouteImport
+      parentRoute: typeof StoreTripIdRoute
+    }
+    '/store/$tripId/ar': {
+      id: '/store/$tripId/ar'
+      path: '/ar'
+      fullPath: '/store/$tripId/ar'
+      preLoaderRoute: typeof StoreTripIdArRouteImport
+      parentRoute: typeof StoreTripIdRoute
+    }
   }
 }
 
+interface TripsTripIdRouteChildren {
+  TripsTripIdPackingRoute: typeof TripsTripIdPackingRoute
+  TripsTripIdSwipeRoute: typeof TripsTripIdSwipeRoute
+}
+
+const TripsTripIdRouteChildren: TripsTripIdRouteChildren = {
+  TripsTripIdPackingRoute: TripsTripIdPackingRoute,
+  TripsTripIdSwipeRoute: TripsTripIdSwipeRoute,
+}
+
+const TripsTripIdRouteWithChildren = TripsTripIdRoute._addFileChildren(
+  TripsTripIdRouteChildren,
+)
+
+interface TripsRouteChildren {
+  TripsTripIdRoute: typeof TripsTripIdRouteWithChildren
+  TripsNewRoute: typeof TripsNewRoute
+}
+
+const TripsRouteChildren: TripsRouteChildren = {
+  TripsTripIdRoute: TripsTripIdRouteWithChildren,
+  TripsNewRoute: TripsNewRoute,
+}
+
+const TripsRouteWithChildren = TripsRoute._addFileChildren(TripsRouteChildren)
+
+interface StoreTripIdRouteChildren {
+  StoreTripIdArRoute: typeof StoreTripIdArRoute
+  StoreTripIdNavRoute: typeof StoreTripIdNavRoute
+  StoreTripIdScanRoute: typeof StoreTripIdScanRoute
+}
+
+const StoreTripIdRouteChildren: StoreTripIdRouteChildren = {
+  StoreTripIdArRoute: StoreTripIdArRoute,
+  StoreTripIdNavRoute: StoreTripIdNavRoute,
+  StoreTripIdScanRoute: StoreTripIdScanRoute,
+}
+
+const StoreTripIdRouteWithChildren = StoreTripIdRoute._addFileChildren(
+  StoreTripIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  TripsRoute: TripsRouteWithChildren,
+  ApiChatRoute: ApiChatRoute,
+  ProductCodeRoute: ProductCodeRoute,
+  StoreTripIdRoute: StoreTripIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
