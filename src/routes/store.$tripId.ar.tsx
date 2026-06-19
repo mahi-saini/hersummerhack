@@ -28,8 +28,9 @@ function AR() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [spotted, setSpotted] = useState<Set<string>>(new Set());
+  const [lastSeen, setLastSeen] = useState<{ code: string; status: "pick" | "catalog" | "unknown" } | null>(null);
 
-  // Map pick product_ids -> list of product_codes (variants) we should highlight
+  // Map pick product_ids -> set of product_codes (variants) we should highlight
   const pickCodes = useMemo(() => {
     if (!products.data || !trip?.picks) return new Set<string>();
     const picksSet = new Set(trip.picks);
@@ -37,6 +38,12 @@ function AR() {
       products.data.filter((p) => picksSet.has(p.product_id)).map((p) => p.product_code),
     );
   }, [products.data, trip?.picks]);
+
+  // Catalog set for "known product but not a pick"
+  const catalogCodes = useMemo(() => {
+    if (!products.data) return new Set<string>();
+    return new Set(products.data.map((p) => p.product_code));
+  }, [products.data]);
 
   // Picks for the checklist UI
   const pickGroups = useMemo(() => {
@@ -49,11 +56,15 @@ function AR() {
       : never;
   }, [products.data, trip?.picks]);
 
-  // Keep latest pickCodes reachable from the highlight callback (which is created once)
+  // Refs so the highlight callback (created once) always sees latest data
   const pickCodesRef = useRef(pickCodes);
+  const catalogCodesRef = useRef(catalogCodes);
+  const tripRef = useRef(trip);
   useEffect(() => {
     pickCodesRef.current = pickCodes;
-  }, [pickCodes]);
+    catalogCodesRef.current = catalogCodes;
+    tripRef.current = trip;
+  }, [pickCodes, catalogCodes, trip]);
 
   useEffect(() => {
     if (!products.data || !trip) return;
@@ -72,31 +83,41 @@ function AR() {
           Symbology.UPCE,
           Symbology.Code128,
           Symbology.Code39,
+          Symbology.Code93,
+          Symbology.InterleavedTwoOfFive,
           Symbology.QR,
           Symbology.DataMatrix,
+          Symbology.PDF417,
         ]);
 
         const barcodeAr = await BarcodeAr.forContext(context, settings);
 
         const emerald = Color.fromHex("#10B981");
-        const transparent = Color.fromHex("#00000000");
-        const fill = Color.fromHex("#10B98140");
-        const pickBrush = new Brush(fill, emerald, 3);
+        const pickFill = Color.fromHex("#10B98140");
+        const pickBrush = new Brush(pickFill, emerald, 3);
+
+        const slate = Color.fromHex("#94A3B8");
+        const slateFill = Color.fromHex("#94A3B833");
+        const neutralBrush = new Brush(slateFill, slate, 2);
 
         const view = await BarcodeArView.create(containerRef.current!, context, barcodeAr);
-        void transparent;
 
         view.highlightProvider = {
           highlightForBarcode: async (barcode: Barcode, callback: (h: any) => void) => {
             const code = barcode.data ?? "";
-            if (pickCodesRef.current.has(code)) {
+            const isPick = pickCodesRef.current.has(code);
+            const inCatalog = catalogCodesRef.current.has(code);
+
+            setLastSeen({ code, status: isPick ? "pick" : inCatalog ? "catalog" : "unknown" });
+
+            if (isPick) {
               const product = byCode(products.data!, code);
               if (product) {
                 setSpotted((prev) => {
                   if (prev.has(product.product_id)) return prev;
                   const next = new Set(prev);
                   next.add(product.product_id);
-                  const confirmed = new Set(trip.confirmedCodes ?? []);
+                  const confirmed = new Set(tripRef.current?.confirmedCodes ?? []);
                   confirmed.add(product.product_code);
                   updateTrip(tripId, { confirmedCodes: [...confirmed] });
                   return next;
@@ -107,8 +128,12 @@ function AR() {
               hl.isPulsing = true;
               callback(hl);
             } else {
-              // non-picks stay neutral (no highlight)
-              callback(null);
+              // Neutral dot so the user can SEE the scanner is reading,
+              // but doesn't draw attention to non-picks.
+              const hl = BarcodeArCircleHighlight.create(barcode, BarcodeArCircleHighlightPreset.Dot);
+              hl.brush = neutralBrush;
+              hl.isPulsing = false;
+              callback(hl);
             }
           },
         };
@@ -128,7 +153,9 @@ function AR() {
       cancelled = true;
       cleanup();
     };
-  }, [products.data, trip, tripId]);
+    // Run once when data is ready; refs handle subsequent updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products.data ? true : false, trip ? true : false]);
 
   const total = pickGroups.length;
   const found = spotted.size;
