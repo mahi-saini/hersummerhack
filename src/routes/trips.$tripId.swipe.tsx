@@ -47,6 +47,24 @@ function SwipePage() {
 
   const done = !current && (trip?.recommendations?.length ?? 0) > 0;
 
+  const genFn = useServerFn(generatePackingList);
+  const [packingStatus, setPackingStatus] = useState<"idle" | "building" | "ready" | "error">("idle");
+  const triggered = useRef(false);
+
+  useEffect(() => {
+    if (!done || !trip || triggered.current) return;
+    if (trip.packing) { setPackingStatus("ready"); return; }
+    if ((trip.picks?.length ?? 0) === 0) return;
+    triggered.current = true;
+    setPackingStatus("building");
+    const pickedGroups = (trip.picks ?? []).map((pid) => groups.get(pid)).filter(Boolean) as any[];
+    const items = pickedGroups.map((g) => ({ product_id: g.product_id, name: g.name, category: g.category }));
+    const { name, country, month, weather, gender, height_cm, weight_kg, sizing_notes, style, days, activities, budget_chf, notes } = trip;
+    genFn({ data: { trip: { name, country, month, weather, gender, height_cm, weight_kg, sizing_notes, style, days, activities, budget_chf, notes }, items } })
+      .then((out) => { updateTrip(tripId, { packing: out }); setPackingStatus("ready"); })
+      .catch((e) => { setPackingStatus("error"); toast.error(String(e instanceof Error ? e.message : e)); triggered.current = false; });
+  }, [done, trip, groups, genFn, tripId]);
+
   return (
     <AppShell title="Your matches" back={`/trips/${tripId}/`}>
       {done ? (
@@ -56,6 +74,25 @@ function SwipePage() {
           <div className="mb-5 text-sm text-muted-foreground">
             You matched with {trip?.picks?.length ?? 0} pieces of gear. We'll greet you with
             the list and an aisle-by-aisle route the moment you arrive.
+          </div>
+          <div className="mb-5 rounded-2xl border border-border bg-muted/40 p-4 text-left text-sm">
+            {packingStatus === "building" && (
+              <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Building your packing list…</div>
+            )}
+            {packingStatus === "ready" && (
+              <Link to="/trips/$tripId/packing" params={{ tripId }} className="flex items-center justify-between gap-2 font-semibold text-primary">
+                <span className="flex items-center gap-2"><Sparkles className="h-4 w-4" /> Packing list ready</span>
+                <span>View →</span>
+              </Link>
+            )}
+            {packingStatus === "error" && (
+              <button onClick={() => { triggered.current = false; setPackingStatus("idle"); }} className="text-sm font-semibold text-primary">
+                Retry packing list
+              </button>
+            )}
+            {packingStatus === "idle" && (trip?.picks?.length ?? 0) === 0 && (
+              <div className="text-muted-foreground">No matches saved — nothing to pack.</div>
+            )}
           </div>
           <Link
             to="/"
