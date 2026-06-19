@@ -73,3 +73,101 @@ export function slotPosition(zone: string, index: number, total: number): { x: n
   const stepY = rows > 1 ? (h - padY * 2) / (rows - 1) : 0;
   return { x: x + padX + col * stepX, y: y + padY + row * stepY };
 }
+
+// ---------- Route building (orthogonal aisle walking) ----------
+export const LEFT_CORRIDOR = 34;
+export const RIGHT_CORRIDOR = 65;
+export const TOP_CONNECTOR = 15;
+export const BOTTOM_CONNECTOR = 92;
+
+type Pt = { x: number; y: number };
+
+function corridorForZone(zone: string, fallback: number): number {
+  const info = ZONE_INFO[zone];
+  if (!info) return fallback;
+  const cx = info.box.x + info.box.w / 2;
+  if (cx < 35) return LEFT_CORRIDOR;
+  if (cx > 60) return RIGHT_CORRIDOR;
+  return fallback;
+}
+
+export type StoreRoute = {
+  points: Pt[];
+  cumulative: number[]; // arc length at each point
+  totalLen: number;
+  pinArcs: number[]; // arc length at which each input pin sits
+};
+
+export function buildStoreRoute(pins: Pt[], pinZones: string[]): StoreRoute {
+  const points: Pt[] = [ENTRANCE_POS];
+  let corridor = LEFT_CORRIDOR;
+  let cur: Pt = { x: corridor, y: BOTTOM_CONNECTOR };
+  points.push(cur);
+  const pinArcs: number[] = new Array(pins.length).fill(0);
+
+  const pushPt = (p: Pt) => points.push(p);
+
+  for (let i = 0; i < pins.length; i++) {
+    const target = pins[i];
+    const zone = pinZones[i];
+    const nextCorridor = corridorForZone(zone, corridor);
+    if (nextCorridor !== corridor) {
+      const connector =
+        Math.abs(cur.y - TOP_CONNECTOR) < Math.abs(cur.y - BOTTOM_CONNECTOR)
+          ? TOP_CONNECTOR
+          : BOTTOM_CONNECTOR;
+      pushPt({ x: corridor, y: connector });
+      pushPt({ x: nextCorridor, y: connector });
+      corridor = nextCorridor;
+      cur = { x: corridor, y: connector };
+    }
+    pushPt({ x: corridor, y: target.y });
+    pushPt({ x: target.x, y: target.y });
+    cur = { x: target.x, y: target.y };
+    pinArcs[i] = points.length - 1; // index, fixed up below
+  }
+
+  const checkout = ZONE_INFO.CHECKOUT.pos;
+  if (corridor !== RIGHT_CORRIDOR) {
+    const connector =
+      Math.abs(cur.y - BOTTOM_CONNECTOR) < Math.abs(cur.y - TOP_CONNECTOR)
+        ? BOTTOM_CONNECTOR
+        : TOP_CONNECTOR;
+    pushPt({ x: corridor, y: connector });
+    pushPt({ x: RIGHT_CORRIDOR, y: connector });
+    corridor = RIGHT_CORRIDOR;
+  }
+  pushPt({ x: RIGHT_CORRIDOR, y: checkout.y });
+  pushPt(checkout);
+  pushPt({ x: RIGHT_CORRIDOR, y: BOTTOM_CONNECTOR });
+  pushPt(EXIT_POS);
+
+  const cumulative: number[] = [0];
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i].x - points[i - 1].x;
+    const dy = points[i].y - points[i - 1].y;
+    cumulative.push(cumulative[i - 1] + Math.hypot(dx, dy));
+  }
+  const arcs = pinArcs.map((idx) => cumulative[idx]);
+  return { points, cumulative, totalLen: cumulative[cumulative.length - 1], pinArcs: arcs };
+}
+
+export function pointAtArc(route: StoreRoute, s: number): { pos: Pt; heading: Pt } {
+  const { points, cumulative, totalLen } = route;
+  const clamped = Math.max(0, Math.min(s, totalLen));
+  for (let i = 1; i < points.length; i++) {
+    if (clamped <= cumulative[i]) {
+      const segLen = cumulative[i] - cumulative[i - 1] || 1;
+      const t = (clamped - cumulative[i - 1]) / segLen;
+      const a = points[i - 1];
+      const b = points[i];
+      return {
+        pos: { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t },
+        heading: { x: b.x - a.x, y: b.y - a.y },
+      };
+    }
+  }
+  const last = points[points.length - 1];
+  const prev = points[points.length - 2] ?? last;
+  return { pos: last, heading: { x: last.x - prev.x, y: last.y - prev.y } };
+}

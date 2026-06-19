@@ -1,119 +1,69 @@
-import { ENTRANCE_POS, EXIT_POS, MAP_ASPECT_RATIO, MAP_IMAGE_SRC, ZONE_INFO } from "@/lib/store-map";
+import {
+  buildStoreRoute,
+  ENTRANCE_POS,
+  EXIT_POS,
+  MAP_ASPECT_RATIO,
+  MAP_IMAGE_SRC,
+  ZONE_INFO,
+} from "@/lib/store-map";
 import { useEffect, useMemo, useState } from "react";
 
 export type MapPin = { x: number; y: number; zone: string; label: string; done?: boolean };
-
-// Aisle corridors (vertical walkways between the zone columns) and the
-// top/bottom connectors that join them. Tuned to the store-map.png.
-const LEFT_CORRIDOR = 34;
-const RIGHT_CORRIDOR = 65;
-const TOP_CONNECTOR = 15;
-const BOTTOM_CONNECTOR = 92;
-
-type Pt = { x: number; y: number };
-
-function corridorForZone(zone: string, fallback: number): number {
-  // Left column zones, middle zones, right column zones — based on box center x.
-  const info = ZONE_INFO[zone];
-  if (!info) return fallback;
-  const cx = info.box.x + info.box.w / 2;
-  if (cx < 35) return LEFT_CORRIDOR;
-  if (cx > 60) return RIGHT_CORRIDOR;
-  // Middle column — stay on whichever corridor we're already walking.
-  return fallback;
-}
-
-/**
- * Orthogonal route that walks the aisles instead of cutting diagonally
- * through shelves. Produces a list of waypoints from entrance → pins →
- * checkout → exit.
- */
-function buildRoute(pins: Pt[], pinZones: string[]): Pt[] {
-  const path: Pt[] = [ENTRANCE_POS];
-  let corridor = LEFT_CORRIDOR; // entrance sits on the left corridor
-  let cur: Pt = { x: corridor, y: BOTTOM_CONNECTOR };
-  path.push(cur);
-
-  const visit = (target: Pt, zone: string) => {
-    const nextCorridor = corridorForZone(zone, corridor);
-    if (nextCorridor !== corridor) {
-      // Switch corridors via the closer connector (top or bottom).
-      const connector = Math.abs(cur.y - TOP_CONNECTOR) < Math.abs(cur.y - BOTTOM_CONNECTOR)
-        ? TOP_CONNECTOR
-        : BOTTOM_CONNECTOR;
-      path.push({ x: corridor, y: connector });
-      path.push({ x: nextCorridor, y: connector });
-      corridor = nextCorridor;
-      cur = { x: corridor, y: connector };
-    }
-    // Walk along the corridor to the pin's y, then step into the shelf.
-    path.push({ x: corridor, y: target.y });
-    path.push({ x: target.x, y: target.y });
-    cur = { x: target.x, y: target.y };
-  };
-
-  for (let i = 0; i < pins.length; i++) visit(pins[i], pinZones[i]);
-
-  // Head to checkout (right corridor) then exit.
-  const checkout = ZONE_INFO.CHECKOUT.pos;
-  if (corridor !== RIGHT_CORRIDOR) {
-    const connector = Math.abs(cur.y - BOTTOM_CONNECTOR) < Math.abs(cur.y - TOP_CONNECTOR)
-      ? BOTTOM_CONNECTOR
-      : TOP_CONNECTOR;
-    path.push({ x: corridor, y: connector });
-    path.push({ x: RIGHT_CORRIDOR, y: connector });
-    corridor = RIGHT_CORRIDOR;
-  }
-  path.push({ x: RIGHT_CORRIDOR, y: checkout.y });
-  path.push(checkout);
-  path.push({ x: RIGHT_CORRIDOR, y: BOTTOM_CONNECTOR });
-  path.push(EXIT_POS);
-  return path;
-}
-
-function pathLength(pts: Pt[]): number {
-  let total = 0;
-  for (let i = 1; i < pts.length; i++) {
-    const dx = pts[i].x - pts[i - 1].x;
-    const dy = pts[i].y - pts[i - 1].y;
-    total += Math.hypot(dx, dy);
-  }
-  return total;
-}
 
 export function StoreMap({
   pins,
   route = true,
   selectedIndex,
   onSelect,
+  userPos,
+  heading,
+  arrived,
 }: {
   pins: MapPin[];
   route?: boolean;
   selectedIndex?: number | null;
   onSelect?: (i: number) => void;
+  userPos?: { x: number; y: number } | null;
+  heading?: { x: number; y: number } | null;
+  arrived?: boolean;
 }) {
   const nextIndex = useMemo(() => pins.findIndex((p) => !p.done), [pins]);
   const focusIndex = selectedIndex ?? (nextIndex >= 0 ? nextIndex : null);
 
-  const pathPoints = useMemo(
-    () => (route ? buildRoute(pins.map((p) => ({ x: p.x, y: p.y })), pins.map((p) => p.zone)) : []),
+  const computed = useMemo(
+    () =>
+      route
+        ? buildStoreRoute(
+            pins.map((p) => ({ x: p.x, y: p.y })),
+            pins.map((p) => p.zone)
+          )
+        : null,
     [pins, route]
   );
 
   const pathD = useMemo(
-    () => pathPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x} ${p.y}`).join(" "),
-    [pathPoints]
+    () =>
+      computed
+        ? computed.points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x} ${p.y}`).join(" ")
+        : "",
+    [computed]
   );
 
-  const totalLen = useMemo(() => pathLength(pathPoints), [pathPoints]);
+  const totalLen = computed?.totalLen ?? 0;
 
-  // Highlight box for the focused pin's zone.
   const focusZone = focusIndex != null ? pins[focusIndex]?.zone : null;
   const focusBox = focusZone ? ZONE_INFO[focusZone]?.box : null;
 
-  // Animated walking dot — runs once on mount and whenever path changes.
   const [tick, setTick] = useState(0);
   useEffect(() => setTick((t) => t + 1), [pathD]);
+
+  // Arrow direction (degrees) from heading vector
+  const arrowDeg = useMemo(() => {
+    if (!heading) return 0;
+    const mag = Math.hypot(heading.x, heading.y);
+    if (mag < 0.0001) return 0;
+    return (Math.atan2(heading.y, heading.x) * 180) / Math.PI;
+  }, [heading]);
 
   return (
     <div
@@ -156,9 +106,8 @@ export function StoreMap({
           </rect>
         )}
 
-        {route && pathPoints.length > 1 && (
+        {route && computed && computed.points.length > 1 && (
           <g>
-            {/* Soft glow under path */}
             <path
               d={pathD}
               fill="none"
@@ -169,7 +118,6 @@ export function StoreMap({
               strokeLinecap="round"
               vectorEffect="non-scaling-stroke"
             />
-            {/* Dashed walking path with draw-on animation */}
             <path
               key={tick}
               d={pathD}
@@ -188,13 +136,11 @@ export function StoreMap({
           </g>
         )}
 
-        {/* Entrance & exit markers */}
         <g>
           <circle cx={ENTRANCE_POS.x} cy={ENTRANCE_POS.y} r="1.4" fill="#10b981" stroke="#fff" strokeWidth="0.4" />
           <circle cx={EXIT_POS.x} cy={EXIT_POS.y} r="1.4" fill="#0ea5e9" stroke="#fff" strokeWidth="0.4" />
         </g>
 
-        {/* Pins */}
         {pins.map((pin, i) => {
           const isFocus = i === focusIndex;
           const isNext = i === nextIndex && !pin.done;
@@ -233,21 +179,45 @@ export function StoreMap({
           );
         })}
 
-        {/* Walking dot following the path */}
-        {route && pathPoints.length > 1 && (
-          <circle key={`dot-${tick}`} r="1.1" fill="#dc2626" stroke="#fff" strokeWidth="0.4">
-            <animateMotion dur="6s" repeatCount="indefinite" rotate="auto" path={pathD} />
-          </circle>
+        {/* You-are-here marker + directional arrow */}
+        {userPos && (
+          <g transform={`translate(${userPos.x} ${userPos.y})`}>
+            {/* Pulsing accuracy ring */}
+            <circle r="3.5" fill="#2563eb" opacity="0.18">
+              <animate attributeName="r" values="3.5;6;3.5" dur="2s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.35;0;0.35" dur="2s" repeatCount="indefinite" />
+            </circle>
+            {/* Directional arrow (hidden when arrived) */}
+            {!arrived && heading && (
+              <g transform={`rotate(${arrowDeg})`}>
+                <polygon
+                  points="3.6,0 -1.2,-2.2 -0.2,0 -1.2,2.2"
+                  fill="#2563eb"
+                  stroke="#fff"
+                  strokeWidth="0.35"
+                  strokeLinejoin="round"
+                  filter="url(#pinShadow)"
+                />
+              </g>
+            )}
+            {/* Solid blue dot */}
+            <circle r="1.5" fill="#2563eb" stroke="#fff" strokeWidth="0.6" />
+            {arrived && (
+              <circle r="2.6" fill="none" stroke="#2563eb" strokeWidth="0.5">
+                <animate attributeName="r" values="2.2;4.5;2.2" dur="1.2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="1;0;1" dur="1.2s" repeatCount="indefinite" />
+              </circle>
+            )}
+          </g>
         )}
       </svg>
 
-      {/* Legend */}
       <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-2 rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-medium text-slate-700 shadow-sm backdrop-blur">
-        <span className="flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />Entrance</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-600" />You</span>
         <span className="text-slate-300">·</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-red-600" />Next stop</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-red-600" />Next</span>
         <span className="text-slate-300">·</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-sky-500" />Exit</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />Done</span>
       </div>
 
       <style>{`@keyframes tm-draw { to { stroke-dashoffset: 0; } }`}</style>
