@@ -5,7 +5,7 @@ import { buildStoreRoute, optimizedZoneOrder, pointAtArc, slotPosition, ZONE_INF
 import { useTrip, useTripStatus } from "@/lib/trip-store";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { ArrowUp, CheckCircle2, MapPin as MapPinIcon, Pause, Play, ScanLine } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export const Route = createFileRoute("/store/$tripId/nav")({
   head: () => ({ meta: [{ title: "Route — TrailMate" }] }),
@@ -60,6 +60,8 @@ function Nav() {
     return zoneOrder.flatMap((z) => resolved.filter((p) => p.zone === z));
   }, [resolved]);
 
+  const [skipped, setSkipped] = useState<Set<string>>(new Set());
+
   // Distribute pins inside each zone so multiple items don't overlap.
   const pins = useMemo<MapPin[]>(() => {
     const byZone = new Map<string, any[]>();
@@ -75,10 +77,10 @@ function Nav() {
       const idx = slotIndex.get(g.zone) ?? 0;
       slotIndex.set(g.zone, idx + 1);
       const pos = slotPosition(g.zone, idx, total);
-      const done = g.variants.some((v: any) => confirmed.has(v.product_code));
+      const done = g.variants.some((v: any) => confirmed.has(v.product_code)) || skipped.has(g.product_id);
       return { x: pos.x, y: pos.y, zone: g.zone, label: g.name, done };
     });
-  }, [ordered, trip?.confirmedCodes]);
+  }, [ordered, trip?.confirmedCodes, skipped]);
 
   const confirmed = new Set(trip?.confirmedCodes ?? []);
   const isConfirmed = (g: any) => g.variants.some((v: any) => confirmed.has(v.product_code));
@@ -99,13 +101,14 @@ function Nav() {
 
   const [arc, setArc] = useState(0);
   const [walking, setWalking] = useState(false);
-  const rafRef = useRef<number | null>(null);
-  const lastT = useRef<number>(0);
+  const [stepCount, setStepCount] = useState(0);
+  const [motionDetected, setMotionDetected] = useState(false);
 
   // Reset position when the route changes
   useEffect(() => {
     setArc(0);
     setWalking(false);
+    setStepCount(0);
   }, [pins.length, tripId]);
 
   // Per-pin arc thresholds; pause within 1.5 units of the next un-done pin
@@ -117,34 +120,78 @@ function Nav() {
 
   const arrived = !!route && Math.abs(arc - targetArc) < ARRIVE_RADIUS && nextIdx >= 0;
 
-  // Animation loop
+  // Step-detected walking: advance only when the phone actually moves.
+  // Uses DeviceMotion accelerometer; falls back to a slow crawl on desktops
+  // that never emit motion events, so the demo isn't completely stuck.
   useEffect(() => {
     if (!walking || !route) return;
-    const speed = 8; // map units per second
-    lastT.current = 0;
-    const step = (t: number) => {
-      // First frame: seed timestamp so dt is ~16ms, not a multi-second jump
-      if (lastT.current === 0) {
-        lastT.current = t;
-        rafRef.current = requestAnimationFrame(step);
-        return;
-      }
-      const dt = (t - lastT.current) / 1000;
-      lastT.current = t;
+
+    let cancelled = false;
+    let removeListener: (() => void) | null = null;
+    let sawMotion = false;
+
+    const state = { baseline: 9.8, lastStepT: 0 };
+    const STEP_THRESHOLD = 1.6; // m/s^2 above baseline
+    const MIN_STEP_MS = 280;
+    const UNITS_PER_STEP = 1.1;
+
+    const advance = (delta: number) => {
       setArc((prev) => {
-        const next = Math.min(prev + speed * dt, targetArc);
+        const next = Math.min(prev + delta, targetArc);
         if (Math.abs(next - targetArc) < ARRIVE_RADIUS) {
           setWalking(false);
           return targetArc;
         }
         return next;
       });
-      rafRef.current = requestAnimationFrame(step);
     };
-    rafRef.current = requestAnimationFrame(step);
+
+    const onMotion = (e: DeviceMotionEvent) => {
+      const a = e.accelerationIncludingGravity || e.acceleration;
+      if (!a || a.x == null) return;
+      sawMotion = true;
+      setMotionDetected(true);
+      const mag = Math.hypot(a.x ?? 0, a.y ?? 0, a.z ?? 0);
+      state.baseline = state.baseline * 0.9 + mag * 0.1;
+      const dynamic = mag - state.baseline;
+      const now = performance.now();
+      if (dynamic > STEP_THRESHOLD && now - state.lastStepT > MIN_STEP_MS) {
+        state.lastStepT = now;
+        setStepCount((s) => s + 1);
+        advance(UNITS_PER_STEP);
+      }
+    };
+
+    const attach = () => {
+      if (cancelled) return;
+      window.addEventListener("devicemotion", onMotion);
+      removeListener = () => window.removeEventListener("devicemotion", onMotion);
+    };
+
+    const DM = (window as any).DeviceMotionEvent;
+    if (DM && typeof DM.requestPermission === "function") {
+      DM.requestPermission().then((res: string) => { if (res === "granted") attach(); }).catch(() => {});
+    } else if (DM) {
+      attach();
+    }
+
+    // Desktop fallback: if no motion arrives within 1.2s, crawl forward slowly.
+    let rafId: number | null = null;
+    let last = 0;
+    const tick = (t: number) => {
+      if (cancelled) return;
+      if (last === 0) { last = t; rafId = requestAnimationFrame(tick); return; }
+      const dt = (t - last) / 1000;
+      last = t;
+      if (!sawMotion && t > 1200) advance(2.2 * dt);
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      lastT.current = 0;
+      cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      if (removeListener) removeListener();
     };
   }, [walking, route, targetArc]);
 
@@ -235,8 +282,15 @@ function Nav() {
                 </>
               ) : (
                 <>
-                  <div className="font-semibold">{headingLabel || "Follow the dashed line"}</div>
-                  <div className="text-xs text-muted-foreground">≈ {distanceToNext.toFixed(0)} steps to {focused?.name}</div>
+                  <div className="font-semibold">{headingLabel || "Follow the line"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    ≈ {distanceToNext.toFixed(0)} steps to {focused?.name}
+                    {walking && (
+                      <span className="ml-1">
+                        · {motionDetected ? `${stepCount} steps detected` : "waiting for movement…"}
+                      </span>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -259,19 +313,27 @@ function Nav() {
             )}
           </div>
 
-          {arrived && (
+          {nextIdx >= 0 && focused && (
             <button
               onClick={() => {
-                // Nudge past this pin so the next stop becomes the target
-                if (route && nextIdx >= 0) {
+                // Mark current focus as skipped and jump arc past it so the
+                // next un-done pin becomes the target.
+                setSkipped((prev) => {
+                  const next = new Set(prev);
+                  next.add(focused.product_id);
+                  return next;
+                });
+                if (route) {
                   setArc(Math.min(targetArc + ARRIVE_RADIUS + 0.1, route.totalLen));
                 }
+                setSelected(null);
               }}
-              className="mt-2 w-full rounded-xl border border-border bg-card py-2 text-xs text-muted-foreground"
+              className="mt-2 w-full rounded-xl border border-border bg-card py-2 text-xs text-muted-foreground hover:bg-muted/50"
             >
-              Skip this stop · continue walking
+              Skip this stop · go to next item
             </button>
           )}
+
 
           <p className="mt-3 text-center text-xs text-muted-foreground">
             Tap any stop on the map or list to focus it. The blue arrow shows which way to walk.

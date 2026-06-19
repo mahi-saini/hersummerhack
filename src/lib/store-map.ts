@@ -98,49 +98,15 @@ export type StoreRoute = {
   pinArcs: number[]; // arc length at which each input pin sits
 };
 
-export function buildStoreRoute(pins: Pt[], pinZones: string[]): StoreRoute {
+export function buildStoreRoute(pins: Pt[], _pinZones: string[]): StoreRoute {
+  // Simple polyline: entrance → each pin in order → exit.
   const points: Pt[] = [ENTRANCE_POS];
-  let corridor = LEFT_CORRIDOR;
-  let cur: Pt = { x: corridor, y: BOTTOM_CONNECTOR };
-  points.push(cur);
   const pinArcs: number[] = new Array(pins.length).fill(0);
-
-  const pushPt = (p: Pt) => points.push(p);
-
   for (let i = 0; i < pins.length; i++) {
-    const target = pins[i];
-    const zone = pinZones[i];
-    const nextCorridor = corridorForZone(zone, corridor);
-    if (nextCorridor !== corridor) {
-      const connector =
-        Math.abs(cur.y - TOP_CONNECTOR) < Math.abs(cur.y - BOTTOM_CONNECTOR)
-          ? TOP_CONNECTOR
-          : BOTTOM_CONNECTOR;
-      pushPt({ x: corridor, y: connector });
-      pushPt({ x: nextCorridor, y: connector });
-      corridor = nextCorridor;
-      cur = { x: corridor, y: connector };
-    }
-    pushPt({ x: corridor, y: target.y });
-    pushPt({ x: target.x, y: target.y });
-    cur = { x: target.x, y: target.y };
-    pinArcs[i] = points.length - 1; // index, fixed up below
+    points.push({ x: pins[i].x, y: pins[i].y });
+    pinArcs[i] = points.length - 1;
   }
-
-  const checkout = ZONE_INFO.CHECKOUT.pos;
-  if (corridor !== RIGHT_CORRIDOR) {
-    const connector =
-      Math.abs(cur.y - BOTTOM_CONNECTOR) < Math.abs(cur.y - TOP_CONNECTOR)
-        ? BOTTOM_CONNECTOR
-        : TOP_CONNECTOR;
-    pushPt({ x: corridor, y: connector });
-    pushPt({ x: RIGHT_CORRIDOR, y: connector });
-    corridor = RIGHT_CORRIDOR;
-  }
-  pushPt({ x: RIGHT_CORRIDOR, y: checkout.y });
-  pushPt(checkout);
-  pushPt({ x: RIGHT_CORRIDOR, y: BOTTOM_CONNECTOR });
-  pushPt(EXIT_POS);
+  points.push(EXIT_POS);
 
   const cumulative: number[] = [0];
   for (let i = 1; i < points.length; i++) {
