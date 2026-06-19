@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Heart, Mountain, Sparkles } from "lucide-react";
-import { listTrips, newTripId, saveTrip, type } from "@/lib/trip-store";
+import { listTrips, newTripId, saveTrip } from "@/lib/trip-store";
 import type { Trip } from "@/lib/types";
 
 export const Route = createFileRoute("/")({
@@ -516,5 +516,3 @@ function Chip({
   );
 }
 
-// Silence unused export warning from accidentally re-exporting `type`
-export const __noop = type ? null : null;
