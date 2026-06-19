@@ -282,8 +282,15 @@ function Nav() {
                 </>
               ) : (
                 <>
-                  <div className="font-semibold">{headingLabel || "Follow the dashed line"}</div>
-                  <div className="text-xs text-muted-foreground">≈ {distanceToNext.toFixed(0)} steps to {focused?.name}</div>
+                  <div className="font-semibold">{headingLabel || "Follow the line"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    ≈ {distanceToNext.toFixed(0)} steps to {focused?.name}
+                    {walking && (
+                      <span className="ml-1">
+                        · {motionDetected ? `${stepCount} steps detected` : "waiting for movement…"}
+                      </span>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -306,19 +313,27 @@ function Nav() {
             )}
           </div>
 
-          {arrived && (
+          {nextIdx >= 0 && focused && (
             <button
               onClick={() => {
-                // Nudge past this pin so the next stop becomes the target
-                if (route && nextIdx >= 0) {
+                // Mark current focus as skipped and jump arc past it so the
+                // next un-done pin becomes the target.
+                setSkipped((prev) => {
+                  const next = new Set(prev);
+                  next.add(focused.product_id);
+                  return next;
+                });
+                if (route) {
                   setArc(Math.min(targetArc + ARRIVE_RADIUS + 0.1, route.totalLen));
                 }
+                setSelected(null);
               }}
-              className="mt-2 w-full rounded-xl border border-border bg-card py-2 text-xs text-muted-foreground"
+              className="mt-2 w-full rounded-xl border border-border bg-card py-2 text-xs text-muted-foreground hover:bg-muted/50"
             >
-              Skip this stop · continue walking
+              Skip this stop · go to next item
             </button>
           )}
+
 
           <p className="mt-3 text-center text-xs text-muted-foreground">
             Tap any stop on the map or list to focus it. The blue arrow shows which way to walk.
