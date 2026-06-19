@@ -1,4 +1,6 @@
-# TrailMate — Scandit × HerCode Hackathon
+# TrailMate — Scandit × HerCode Hackathon 
+
+Here is the published Lovable site: https://trailmate-codevi.lovable.app 
 
 > AI concierge for a Swiss outdoor retailer. Plan your trip at home, get an AI-curated gear checklist, then let TrailMate guide you through the store with Scandit scanning, AR shelf highlighting, product chat, and step-aware indoor navigation.
 
