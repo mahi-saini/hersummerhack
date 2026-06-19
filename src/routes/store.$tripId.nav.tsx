@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/AppShell";
-import { StoreMap } from "@/components/StoreMap";
+import { StoreMap, type MapPin } from "@/components/StoreMap";
 import { groupByProductId, useProducts } from "@/lib/products";
-import { orderZones, ZONE_INFO } from "@/lib/store-map";
+import { optimizedZoneOrder, slotPosition, ZONE_INFO } from "@/lib/store-map";
 import { useTrip } from "@/lib/trip-store";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { CheckCircle2, ScanLine } from "lucide-react";
@@ -18,11 +18,46 @@ function Nav() {
   const products = useProducts();
   const groups = useMemo(() => (products.data ? groupByProductId(products.data) : new Map()), [products.data]);
 
-  const picked = (trip?.picks ?? []).map((pid) => groups.get(pid)).filter(Boolean) as any[];
+  // Source product ids: swiped picks first; fall back to AI recommendations
+  // so the map is still useful before the user has finished swiping.
+  const sourceIds = useMemo(() => {
+    const picks = trip?.picks ?? [];
+    if (picks.length) return { ids: picks, fromPicks: true };
+    const recs = (trip?.recommendations ?? []).map((r) => r.product_id);
+    return { ids: recs, fromPicks: false };
+  }, [trip?.picks, trip?.recommendations]);
+
+  const resolved = useMemo(
+    () => sourceIds.ids.map((pid) => groups.get(pid)).filter(Boolean) as any[],
+    [sourceIds.ids, groups]
+  );
+
+  // Optimized walking order: nearest-neighbor across zones, products in same
+  // zone grouped together so the shopper doesn't backtrack.
   const ordered = useMemo(() => {
-    const order = orderZones(picked.map((p) => p.zone));
-    return order.flatMap((z) => picked.filter((p) => p.zone === z));
-  }, [picked]);
+    const zoneOrder = optimizedZoneOrder(resolved.map((p) => p.zone));
+    return zoneOrder.flatMap((z) => resolved.filter((p) => p.zone === z));
+  }, [resolved]);
+
+  // Distribute pins inside each zone so multiple items don't overlap.
+  const pins = useMemo<MapPin[]>(() => {
+    const byZone = new Map<string, any[]>();
+    for (const g of ordered) {
+      const arr = byZone.get(g.zone) ?? [];
+      arr.push(g);
+      byZone.set(g.zone, arr);
+    }
+    const slotIndex = new Map<string, number>();
+    const confirmed = new Set(trip?.confirmedCodes ?? []);
+    return ordered.map((g) => {
+      const total = byZone.get(g.zone)!.length;
+      const idx = slotIndex.get(g.zone) ?? 0;
+      slotIndex.set(g.zone, idx + 1);
+      const pos = slotPosition(g.zone, idx, total);
+      const done = g.variants.some((v: any) => confirmed.has(v.product_code));
+      return { x: pos.x, y: pos.y, zone: g.zone, label: g.name, done };
+    });
+  }, [ordered, trip?.confirmedCodes]);
 
   const confirmed = new Set(trip?.confirmedCodes ?? []);
   const isConfirmed = (g: any) => g.variants.some((v: any) => confirmed.has(v.product_code));
@@ -31,13 +66,18 @@ function Nav() {
     <AppShell title="Your route" back={`/store/${tripId}`}>
       {ordered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          No picks yet. Go back and swipe some recommendations first.
+          No products yet. Go back and generate matches or swipe recommendations first.
         </div>
       ) : (
         <>
-          <StoreMap pins={ordered.map((g) => ({ zone: g.zone, aisle: g.aisle, name: g.name }))} />
+          {!sourceIds.fromPicks && (
+            <div className="mb-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
+              Showing your AI recommendations — swipe to lock in your picks for a tighter route.
+            </div>
+          )}
+          <StoreMap pins={pins} />
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            Walk up aisle 1, across the top, down aisle 2, then to checkout.
+            Optimized path: nearest aisle first, then on to checkout.
           </p>
 
           <ol className="mt-5 space-y-3">
