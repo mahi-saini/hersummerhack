@@ -120,9 +120,16 @@ function Nav() {
   // Animation loop
   useEffect(() => {
     if (!walking || !route) return;
-    const speed = 6; // map units per second
+    const speed = 8; // map units per second
+    lastT.current = 0;
     const step = (t: number) => {
-      const dt = lastT.current ? (t - lastT.current) / 1000 : 0;
+      // First frame: seed timestamp so dt is ~16ms, not a multi-second jump
+      if (lastT.current === 0) {
+        lastT.current = t;
+        rafRef.current = requestAnimationFrame(step);
+        return;
+      }
+      const dt = (t - lastT.current) / 1000;
       lastT.current = t;
       setArc((prev) => {
         const next = Math.min(prev + speed * dt, targetArc);
@@ -134,7 +141,6 @@ function Nav() {
       });
       rafRef.current = requestAnimationFrame(step);
     };
-    lastT.current = 0;
     rafRef.current = requestAnimationFrame(step);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
