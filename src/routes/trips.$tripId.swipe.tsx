@@ -42,7 +42,6 @@ function SwipePage() {
     setIdx((i) => i + 1);
   }
 
-  const navigate = useNavigate();
   const done = !current && (trip?.recommendations?.length ?? 0) > 0;
 
   return (
