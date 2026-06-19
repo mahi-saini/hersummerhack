@@ -2,7 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { ProductHero, specChips } from "@/components/ProductCard";
 import { groupByProductId, useProducts } from "@/lib/products";
 import { useTrip, updateTrip } from "@/lib/trip-store";
-import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { useMemo, useState } from "react";
 import { MapPin } from "lucide-react";
