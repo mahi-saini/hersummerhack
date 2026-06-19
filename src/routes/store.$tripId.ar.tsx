@@ -182,13 +182,24 @@ function AR() {
         )}
         {!error && (
           <>
-            <div className="pointer-events-none absolute inset-x-0 top-3 mx-3 flex items-center justify-between rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur">
-              <span className="inline-flex items-center gap-1.5">
-                <ScanLine className="h-3.5 w-3.5" /> Scan the shelf
-              </span>
-              <span className="font-semibold">
-                {found} / {total} found
-              </span>
+            <div className="pointer-events-none absolute inset-x-3 top-3 rounded-2xl bg-black/70 px-3 py-2 text-white backdrop-blur">
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 text-[11px] opacity-80">
+                  <ScanLine className="h-3.5 w-3.5" /> Scanning shelf…
+                </span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                    found > 0 ? "bg-emerald-500 text-white" : "bg-white/15 text-white"
+                  }`}
+                >
+                  {found} of {total} from your list
+                </span>
+              </div>
+              {found > 0 && (
+                <div className="mt-1 truncate text-[11px] text-emerald-300">
+                  Found: {pickGroups.filter((g) => spotted.has(g.product_id)).map((g) => g.name).join(" · ")}
+                </div>
+              )}
             </div>
             {lastSeen && (
               <div className="pointer-events-none absolute inset-x-3 bottom-3 rounded-xl bg-black/70 px-3 py-2 text-[11px] text-white backdrop-blur">
