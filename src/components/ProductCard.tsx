@@ -1,5 +1,7 @@
 import type { ProductGroup } from "@/lib/types";
 import { ZONE_INFO } from "@/lib/store-map";
+import { useProductImage } from "@/lib/product-image-cache";
+import { useState } from "react";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   hardshell: "🧥",
@@ -28,17 +30,32 @@ const CATEGORY_EMOJI: Record<string, string> = {
 export function ProductHero({ group, className }: { group: ProductGroup; className?: string }) {
   const zone = ZONE_INFO[group.zone];
   const emoji = CATEGORY_EMOJI[group.category] ?? "🎽";
+  const imageUrl = useProductImage(group);
+  const [errored, setErrored] = useState(false);
+  const showImage = imageUrl && !errored;
+
   return (
     <div
-      className={`flex aspect-[4/5] items-center justify-center overflow-hidden rounded-2xl ${className ?? ""}`}
+      className={`relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-2xl ${className ?? ""}`}
       style={{
         background: `linear-gradient(160deg, ${zone?.color ?? "#ddd"} 0%, #ffffff 100%)`,
       }}
     >
-      <div className="text-center">
-        <div className="text-7xl">{emoji}</div>
-        <div className="mt-3 text-xs uppercase tracking-wider text-foreground/70">{group.brand}</div>
-      </div>
+      {showImage ? (
+        <img
+          src={imageUrl!}
+          alt={`${group.brand} ${group.name}`}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setErrored(true)}
+          className="h-full w-full object-contain p-4 mix-blend-multiply"
+        />
+      ) : (
+        <div className="text-center">
+          <div className="text-7xl">{emoji}</div>
+          <div className="mt-3 text-xs uppercase tracking-wider text-foreground/70">{group.brand}</div>
+        </div>
+      )}
     </div>
   );
 }
