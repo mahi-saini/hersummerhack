@@ -11,7 +11,7 @@ import {
   Symbology,
   type BarcodeCaptureSession,
 } from "@scandit/web-datacapture-barcode";
-import { CheckCircle2, Circle, ListPlus, ShoppingBag, Trash2, X } from "lucide-react";
+import { CheckCircle2, Circle, ListPlus, ShoppingBag, Trash2, X, AlertTriangle, Info, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/store/$tripId/scan")({
@@ -85,6 +85,9 @@ function Scan() {
 
   const product = scanned && products.data ? byCode(products.data, scanned) : null;
   const isOnList = !!(product && trip?.picks?.includes(product.product_id));
+  const [showFit, setShowFit] = useState(false);
+  useEffect(() => { setShowFit(false); }, [scanned]);
+  const fit = useMemo(() => (product && trip ? assessFit(product, trip) : null), [product, trip]);
 
   async function resumeScanning() {
     setScanned(null);
@@ -202,18 +205,34 @@ function Scan() {
 
       {product && (
         <div className="mt-4 space-y-4">
-          <div
-            className={`rounded-2xl border p-4 ${
+          <button
+            type="button"
+            onClick={() => setShowFit((v) => !v)}
+            className={`w-full rounded-2xl border p-4 text-left transition ${
               isOnList ? "border-emerald-400 bg-emerald-50" : "border-sky-300 bg-sky-50"
             }`}
           >
-            <div
-              className={`mb-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase text-white ${
-                isOnList ? "bg-emerald-600" : "bg-sky-600"
-              }`}
-            >
-              {isOnList ? <CheckCircle2 className="h-3 w-3" /> : <ShoppingBag className="h-3 w-3" />}
-              {isOnList ? "On your list" : "New find"}
+            <div className="flex items-start justify-between gap-2">
+              <div
+                className={`mb-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase text-white ${
+                  isOnList ? "bg-emerald-600" : "bg-sky-600"
+                }`}
+              >
+                {isOnList ? <CheckCircle2 className="h-3 w-3" /> : <ShoppingBag className="h-3 w-3" />}
+                {isOnList ? "On your list" : "New find"}
+              </div>
+              {fit && (
+                <div
+                  className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${fitBadgeClass(fit.verdict)}`}
+                >
+                  {fit.verdict === "good" ? <CheckCircle2 className="h-3 w-3" /> :
+                   fit.verdict === "warn" ? <AlertTriangle className="h-3 w-3" /> :
+                   <X className="h-3 w-3" />}
+                  {fit.verdict === "good" ? "Good for your trip" :
+                   fit.verdict === "warn" ? "Check fit" :
+                   "Not for this trip"}
+                </div>
+              )}
             </div>
             <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{product.brand}</div>
             <div className="text-base font-semibold">{product.name}</div>
@@ -223,7 +242,31 @@ function Scan() {
             <div className="mt-1 text-[11px] text-muted-foreground">
               Zone {product.zone} · Aisle {product.aisle} · Stock {product.stock_total}
             </div>
-          </div>
+            <div className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+              <Info className="h-3 w-3" />
+              {showFit ? "Hide" : "Tap to see if this fits your trip"}
+              <ChevronDown className={`h-3 w-3 transition ${showFit ? "rotate-180" : ""}`} />
+            </div>
+          </button>
+
+          {showFit && fit && (
+            <div
+              className={`rounded-2xl border p-4 text-sm ${
+                fit.verdict === "good" ? "border-emerald-300 bg-emerald-50 text-emerald-900" :
+                fit.verdict === "warn" ? "border-amber-300 bg-amber-50 text-amber-900" :
+                "border-rose-300 bg-rose-50 text-rose-900"
+              }`}
+            >
+              <div className="mb-1 font-semibold">{fit.headline}</div>
+              <ul className="list-disc space-y-1 pl-5 text-xs">
+                {fit.reasons.map((r, i) => <li key={i}>{r}</li>)}
+              </ul>
+              <div className="mt-2 text-[11px] opacity-80">
+                Based on your trip: {trip?.country || "—"}, {trip?.month || "—"}, {trip?.weather || "any weather"}
+                {trip?.activities?.length ? ` · ${trip.activities.join(", ")}` : ""}
+              </div>
+            </div>
+          )}
 
           {isOnList ? (
             <div className="space-y-2">
@@ -326,4 +369,81 @@ function Scan() {
       )}
     </AppShell>
   );
+}
+
+type FitVerdict = "good" | "warn" | "bad";
+type FitAssessment = { verdict: FitVerdict; headline: string; reasons: string[] };
+
+function fitBadgeClass(v: FitVerdict): string {
+  if (v === "good") return "bg-emerald-100 text-emerald-800";
+  if (v === "warn") return "bg-amber-100 text-amber-800";
+  return "bg-rose-100 text-rose-800";
+}
+
+function classifyTripTemp(trip: { weather?: string; month?: string; country?: string; activities?: string[] }): "cold" | "mild" | "warm" | "unknown" {
+  const blob = `${trip.weather ?? ""} ${trip.month ?? ""} ${trip.country ?? ""} ${(trip.activities ?? []).join(" ")}`.toLowerCase();
+  if (/(cold|winter|snow|sub[- ]?zero|freezing|alpine|ski|mountaineer|ice|arctic|nordic|january|february|december)/.test(blob)) return "cold";
+  if (/(hot|tropical|desert|summer|beach|jungle|july|august|june)/.test(blob)) return "warm";
+  if (/(mild|spring|autumn|fall|rain|wet|temperate|october|april|may|september|march|november)/.test(blob)) return "mild";
+  return "unknown";
+}
+
+function assessFit(p: { name: string; category?: string; tags?: string[]; temp_rating_c: number | null; waterproof_rating_mm: number | null; weight_g: number | null; material?: string }, trip: { weather?: string; month?: string; country?: string; activities?: string[] }): FitAssessment {
+  const climate = classifyTripTemp(trip);
+  const tags = (p.tags ?? []).map((t) => t.toLowerCase());
+  const cat = (p.category ?? "").toLowerCase();
+  const name = p.name.toLowerCase();
+  const isJacket = /jacket|shell|parka|coat|insulation|down|fleece/.test(cat + " " + name + " " + tags.join(" "));
+  const isFootwear = /boot|shoe|footwear|sandal/.test(cat + " " + name);
+  const isSleep = /sleep|bag|quilt/.test(cat + " " + name + " " + tags.join(" "));
+  const isShelter = /tent|shelter|tarp/.test(cat + " " + name);
+  const wantsWet = /(rain|wet|monsoon)/.test(`${trip.weather ?? ""} ${trip.month ?? ""}`.toLowerCase());
+
+  const reasons: string[] = [];
+  let verdict: FitVerdict = "good";
+
+  // Temperature rating
+  if (p.temp_rating_c != null) {
+    if (climate === "cold" && p.temp_rating_c > 5) { verdict = "bad"; reasons.push(`Rated to ${p.temp_rating_c}°C — too warm-weather for a cold trip.`); }
+    else if (climate === "cold" && p.temp_rating_c > -5) { if ((verdict as FitVerdict) !== "bad") verdict = "warn"; reasons.push(`Rated to ${p.temp_rating_c}°C — borderline for cold conditions; consider warmer.`); }
+    else if (climate === "warm" && p.temp_rating_c < -5) { if ((verdict as FitVerdict) !== "bad") verdict = "warn"; reasons.push(`Rated to ${p.temp_rating_c}°C — likely too warm for a hot-weather trip.`); }
+    else reasons.push(`Temperature rating ${p.temp_rating_c}°C matches your trip.`);
+  } else if (isJacket || isSleep) {
+    // No rating — infer from weight & material
+    if (climate === "cold" && p.weight_g != null && p.weight_g < 350 && isJacket) {
+      verdict = "bad";
+      reasons.push(`This is a lightweight ${isJacket ? "shell" : "piece"} (${p.weight_g}g) — not warm enough for cold weather. Look for insulated/down options.`);
+    } else if (climate === "cold" && /windbreaker|ultralight|packable/.test(name + " " + tags.join(" "))) {
+      verdict = "bad";
+      reasons.push("Marketed as ultralight/packable — won't keep you warm on a cold trip.");
+    }
+  }
+
+  // Waterproofing
+  if (wantsWet) {
+    if (p.waterproof_rating_mm != null && p.waterproof_rating_mm >= 10000) reasons.push(`Waterproof to ${p.waterproof_rating_mm}mm — solid for wet weather.`);
+    else if (p.waterproof_rating_mm != null && p.waterproof_rating_mm < 5000 && (isJacket || isFootwear || isShelter)) {
+      if (verdict !== "bad") verdict = "warn";
+      reasons.push(`Only ${p.waterproof_rating_mm}mm waterproof — may leak in sustained rain.`);
+    } else if (p.waterproof_rating_mm == null && (isJacket || isFootwear || isShelter)) {
+      if (verdict !== "bad") verdict = "warn";
+      reasons.push("No waterproof rating listed — risky for the wet weather you described.");
+    }
+  }
+
+  // Activity match
+  const acts = (trip.activities ?? []).map((a) => a.toLowerCase());
+  if (acts.some((a) => /climb|mountaineer|alpine/.test(a)) && /casual|urban|lifestyle/.test(tags.join(" "))) {
+    if (verdict !== "bad") verdict = "warn";
+    reasons.push("Tagged as casual/urban — not built for technical alpine use.");
+  }
+
+  if (!reasons.length) reasons.push("Looks suitable for the trip you set up.");
+
+  const headline =
+    verdict === "bad" ? "Skip this for your trip" :
+    verdict === "warn" ? "Could work, but check the details" :
+    "Good match for your trip";
+
+  return { verdict, headline, reasons };
 }
