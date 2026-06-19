@@ -1,23 +1,27 @@
-// Store layout: entrance at bottom, checkout at bottom-right.
-// Based on store-map.png.
+// Store layout calibrated to /public/store-map.png (1720x1240).
+// All positions are percentages of the PNG so an SVG overlay with
+// viewBox="0 0 100 100" and preserveAspectRatio="none" lines up exactly.
 export const ZONE_ORDER = ["A", "B", "C", "F", "D", "E", "G"] as const;
 
-export const ENTRANCE_POS = { x: 38, y: 95 };
-export const EXIT_POS = { x: 65, y: 95 };
+export const ENTRANCE_POS = { x: 35.5, y: 95 };
+export const EXIT_POS = { x: 64.8, y: 95 };
 
 export const ZONE_INFO: Record<
   string,
   { name: string; color: string; pos: { x: number; y: number }; box: { x: number; y: number; w: number; h: number } }
 > = {
-  A: { name: "Jackets & Shells", color: "#7fb3d5", pos: { x: 15, y: 78 }, box: { x: 6, y: 66, w: 18, h: 20 } },
-  B: { name: "Footwear", color: "#82c997", pos: { x: 15, y: 55 }, box: { x: 6, y: 42, w: 18, h: 20 } },
-  C: { name: "Tents & Shelter", color: "#f5b97a", pos: { x: 15, y: 30 }, box: { x: 6, y: 18, w: 18, h: 20 } },
-  F: { name: "Base Layers & Clothing", color: "#84d4cc", pos: { x: 50, y: 35 }, box: { x: 40, y: 20, w: 20, h: 32 } },
-  G: { name: "Accessories", color: "#f0d672", pos: { x: 50, y: 70 }, box: { x: 40, y: 56, w: 20, h: 32 } },
-  D: { name: "Sleep", color: "#bda5f0", pos: { x: 85, y: 30 }, box: { x: 76, y: 20, w: 18, h: 20 } },
-  E: { name: "Backpacks", color: "#f3a5bd", pos: { x: 85, y: 55 }, box: { x: 76, y: 44, w: 18, h: 20 } },
-  CHECKOUT: { name: "Checkout", color: "#cccccc", pos: { x: 85, y: 80 }, box: { x: 76, y: 68, w: 18, h: 20 } },
+  C: { name: "Tents & Shelter", color: "#f5b97a", pos: { x: 18.9, y: 31.7 }, box: { x: 11.6, y: 21.4, w: 14.6, h: 20.5 } },
+  B: { name: "Footwear",        color: "#82c997", pos: { x: 18.9, y: 53.4 }, box: { x: 11.6, y: 43.1, w: 14.6, h: 20.6 } },
+  A: { name: "Jackets & Shells",color: "#7fb3d5", pos: { x: 18.9, y: 75.8 }, box: { x: 11.6, y: 64.9, w: 14.6, h: 21.8 } },
+  F: { name: "Base Layers & Clothing", color: "#84d4cc", pos: { x: 50.3, y: 36.9 }, box: { x: 41.9, y: 21.4, w: 16.8, h: 31.0 } },
+  G: { name: "Accessories",     color: "#f0d672", pos: { x: 50.3, y: 73.6 }, box: { x: 41.9, y: 60.5, w: 16.8, h: 26.2 } },
+  D: { name: "Sleep",           color: "#bda5f0", pos: { x: 79.9, y: 31.7 }, box: { x: 71.5, y: 21.4, w: 16.9, h: 20.5 } },
+  E: { name: "Backpacks",       color: "#f3a5bd", pos: { x: 79.9, y: 53.4 }, box: { x: 71.5, y: 43.1, w: 16.9, h: 20.6 } },
+  CHECKOUT: { name: "Checkout", color: "#cccccc", pos: { x: 79.9, y: 75.8 }, box: { x: 71.5, y: 64.9, w: 16.9, h: 21.8 } },
 };
+
+export const MAP_IMAGE_SRC = "/store-map.png";
+export const MAP_ASPECT_RATIO = 1720 / 1240;
 
 export function orderZones(zones: string[]): string[] {
   const set = new Set(zones);
@@ -25,9 +29,8 @@ export function orderZones(zones: string[]): string[] {
 }
 
 /**
- * Nearest-neighbor TSP from the entrance through every unique zone, biased
- * to finish near the checkout. Good enough for ~10 stops and feels natural
- * because the next stop is always the closest unvisited zone.
+ * Nearest-neighbor walk from the entrance through every unique zone.
+ * Good enough for ~10 stops and avoids backtracking.
  */
 export function optimizedZoneOrder(zones: string[]): string[] {
   const remaining = Array.from(new Set(zones)).filter((z) => ZONE_INFO[z]);
@@ -52,8 +55,8 @@ export function optimizedZoneOrder(zones: string[]): string[] {
 }
 
 /**
- * Distribute N product pins inside a zone's box on a small grid so multiple
- * items in the same aisle don't overlap visually.
+ * Grid-distribute N pins inside a zone's box so multiple items in the same
+ * aisle don't overlap.
  */
 export function slotPosition(zone: string, index: number, total: number): { x: number; y: number } {
   const info = ZONE_INFO[zone];
