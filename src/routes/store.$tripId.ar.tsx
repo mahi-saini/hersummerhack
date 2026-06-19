@@ -87,12 +87,14 @@ function AR() {
         const barcodeAr = await BarcodeAr.forContext(context, settings);
 
         const emerald = Color.fromHex("#10B981");
-        const pickFill = Color.fromHex("#10B98140");
-        const pickBrush = new Brush(pickFill, emerald, 3);
+        const pickFill = Color.fromHex("#10B98166");
+        const pickBrush = new Brush(pickFill, emerald, 4);
 
-        const slate = Color.fromHex("#94A3B8");
-        const slateFill = Color.fromHex("#94A3B833");
-        const neutralBrush = new Brush(slateFill, slate, 2);
+        // Almost invisible — confirms the SDK sees the code, but doesn't compete
+        // with the picks on a shelf full of barcodes.
+        const ghost = Color.fromHex("#FFFFFF22");
+        const ghostStroke = Color.fromHex("#FFFFFF55");
+        const neutralBrush = new Brush(ghost, ghostStroke, 1);
 
         const view = await BarcodeArView.create(containerRef.current!, context, barcodeAr);
 
