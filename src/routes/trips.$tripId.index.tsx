@@ -14,7 +14,7 @@ export const Route = createFileRoute("/trips/$tripId/")({
 });
 
 function TripDashboard() {
-  const { tripId } = useParams({ from: "/trips/$tripId" });
+  const { tripId } = useParams({ from: "/trips/$tripId/" });
   const trip = useTrip(tripId);
   const products = useProducts();
   const fn = useServerFn(generateChecklist);
