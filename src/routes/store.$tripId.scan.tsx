@@ -267,6 +267,8 @@ function Scan() {
               </div>
             </div>
           )}
+
+          {isOnList ? (
             <div className="space-y-2">
               <div className="px-1 text-sm font-semibold">Already on your list! Ready to buy this?</div>
               <button
