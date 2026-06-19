@@ -136,6 +136,38 @@ function Scan() {
     await resumeScanning();
   }
 
+  // ---- Manual list management ----
+  const pickGroups = useMemo(() => {
+    if (!products.data || !trip?.picks) return [];
+    const groups = groupByProductId(products.data);
+    return trip.picks.map((id) => groups.get(id)).filter(Boolean) as any[];
+  }, [products.data, trip?.picks]);
+
+  const confirmedCodes = new Set(trip?.confirmedCodes ?? []);
+  const isGroupChecked = (g: any) =>
+    g.variants.some((v: any) => confirmedCodes.has(v.product_code));
+
+  function toggleCheck(g: any) {
+    const set = new Set(trip?.confirmedCodes ?? []);
+    const codes: string[] = g.variants.map((v: any) => v.product_code);
+    const checked = codes.some((c) => set.has(c));
+    if (checked) {
+      codes.forEach((c) => set.delete(c));
+    } else {
+      // Mark the first variant as confirmed (representative)
+      set.add(codes[0]);
+    }
+    updateTrip(tripId, { confirmedCodes: [...set] });
+  }
+
+  function removeFromList(g: any) {
+    const picks = (trip?.picks ?? []).filter((id) => id !== g.product_id);
+    const codes: string[] = g.variants.map((v: any) => v.product_code);
+    const confirmed = (trip?.confirmedCodes ?? []).filter((c) => !codes.includes(c));
+    updateTrip(tripId, { picks, confirmedCodes: confirmed });
+    toast.success(`Removed ${g.name}`);
+  }
+
   return (
     <AppShell title="Scan" back={`/store/${tripId}`}>
       <div className="relative h-[55vh] w-full overflow-hidden rounded-2xl bg-black">
