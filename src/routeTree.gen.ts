@@ -21,6 +21,7 @@ import { Route as StoreTripIdIndexRouteImport } from './routes/store.$tripId.ind
 import { Route as TripsTripIdSwipeRouteImport } from './routes/trips.$tripId.swipe'
 import { Route as TripsTripIdPreparingRouteImport } from './routes/trips.$tripId.preparing'
 import { Route as TripsTripIdPackingRouteImport } from './routes/trips.$tripId.packing'
+import { Route as TripsTripIdEditRouteImport } from './routes/trips.$tripId.edit'
 import { Route as StoreTripIdScanRouteImport } from './routes/store.$tripId.scan'
 import { Route as StoreTripIdNavRouteImport } from './routes/store.$tripId.nav'
 import { Route as StoreTripIdArRouteImport } from './routes/store.$tripId.ar'
@@ -85,6 +86,11 @@ const TripsTripIdPackingRoute = TripsTripIdPackingRouteImport.update({
   path: '/packing',
   getParentRoute: () => TripsTripIdRoute,
 } as any)
+const TripsTripIdEditRoute = TripsTripIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => TripsTripIdRoute,
+} as any)
 const StoreTripIdScanRoute = StoreTripIdScanRouteImport.update({
   id: '/scan',
   path: '/scan',
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/store/$tripId/ar': typeof StoreTripIdArRoute
   '/store/$tripId/nav': typeof StoreTripIdNavRoute
   '/store/$tripId/scan': typeof StoreTripIdScanRoute
+  '/trips/$tripId/edit': typeof TripsTripIdEditRoute
   '/trips/$tripId/packing': typeof TripsTripIdPackingRoute
   '/trips/$tripId/preparing': typeof TripsTripIdPreparingRoute
   '/trips/$tripId/swipe': typeof TripsTripIdSwipeRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/store/$tripId/ar': typeof StoreTripIdArRoute
   '/store/$tripId/nav': typeof StoreTripIdNavRoute
   '/store/$tripId/scan': typeof StoreTripIdScanRoute
+  '/trips/$tripId/edit': typeof TripsTripIdEditRoute
   '/trips/$tripId/packing': typeof TripsTripIdPackingRoute
   '/trips/$tripId/preparing': typeof TripsTripIdPreparingRoute
   '/trips/$tripId/swipe': typeof TripsTripIdSwipeRoute
@@ -145,6 +153,7 @@ export interface FileRoutesById {
   '/store/$tripId/ar': typeof StoreTripIdArRoute
   '/store/$tripId/nav': typeof StoreTripIdNavRoute
   '/store/$tripId/scan': typeof StoreTripIdScanRoute
+  '/trips/$tripId/edit': typeof TripsTripIdEditRoute
   '/trips/$tripId/packing': typeof TripsTripIdPackingRoute
   '/trips/$tripId/preparing': typeof TripsTripIdPreparingRoute
   '/trips/$tripId/swipe': typeof TripsTripIdSwipeRoute
@@ -164,6 +173,7 @@ export interface FileRouteTypes {
     | '/store/$tripId/ar'
     | '/store/$tripId/nav'
     | '/store/$tripId/scan'
+    | '/trips/$tripId/edit'
     | '/trips/$tripId/packing'
     | '/trips/$tripId/preparing'
     | '/trips/$tripId/swipe'
@@ -179,6 +189,7 @@ export interface FileRouteTypes {
     | '/store/$tripId/ar'
     | '/store/$tripId/nav'
     | '/store/$tripId/scan'
+    | '/trips/$tripId/edit'
     | '/trips/$tripId/packing'
     | '/trips/$tripId/preparing'
     | '/trips/$tripId/swipe'
@@ -196,6 +207,7 @@ export interface FileRouteTypes {
     | '/store/$tripId/ar'
     | '/store/$tripId/nav'
     | '/store/$tripId/scan'
+    | '/trips/$tripId/edit'
     | '/trips/$tripId/packing'
     | '/trips/$tripId/preparing'
     | '/trips/$tripId/swipe'
@@ -299,6 +311,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TripsTripIdPackingRouteImport
       parentRoute: typeof TripsTripIdRoute
     }
+    '/trips/$tripId/edit': {
+      id: '/trips/$tripId/edit'
+      path: '/edit'
+      fullPath: '/trips/$tripId/edit'
+      preLoaderRoute: typeof TripsTripIdEditRouteImport
+      parentRoute: typeof TripsTripIdRoute
+    }
     '/store/$tripId/scan': {
       id: '/store/$tripId/scan'
       path: '/scan'
@@ -342,6 +361,7 @@ const StoreTripIdRouteWithChildren = StoreTripIdRoute._addFileChildren(
 )
 
 interface TripsTripIdRouteChildren {
+  TripsTripIdEditRoute: typeof TripsTripIdEditRoute
   TripsTripIdPackingRoute: typeof TripsTripIdPackingRoute
   TripsTripIdPreparingRoute: typeof TripsTripIdPreparingRoute
   TripsTripIdSwipeRoute: typeof TripsTripIdSwipeRoute
@@ -349,6 +369,7 @@ interface TripsTripIdRouteChildren {
 }
 
 const TripsTripIdRouteChildren: TripsTripIdRouteChildren = {
+  TripsTripIdEditRoute: TripsTripIdEditRoute,
   TripsTripIdPackingRoute: TripsTripIdPackingRoute,
   TripsTripIdPreparingRoute: TripsTripIdPreparingRoute,
   TripsTripIdSwipeRoute: TripsTripIdSwipeRoute,

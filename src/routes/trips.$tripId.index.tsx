@@ -5,7 +5,7 @@ import { generateChecklist } from "@/lib/ai.functions";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, Heart, ListChecks, MapPin, ScanLine, Sparkles } from "lucide-react";
+import { CheckCircle2, Heart, ListChecks, MapPin, Pencil, ScanLine, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 
