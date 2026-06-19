@@ -60,6 +60,8 @@ function Nav() {
     return zoneOrder.flatMap((z) => resolved.filter((p) => p.zone === z));
   }, [resolved]);
 
+  const [skipped, setSkipped] = useState<Set<string>>(new Set());
+
   // Distribute pins inside each zone so multiple items don't overlap.
   const pins = useMemo<MapPin[]>(() => {
     const byZone = new Map<string, any[]>();
@@ -75,10 +77,10 @@ function Nav() {
       const idx = slotIndex.get(g.zone) ?? 0;
       slotIndex.set(g.zone, idx + 1);
       const pos = slotPosition(g.zone, idx, total);
-      const done = g.variants.some((v: any) => confirmed.has(v.product_code));
+      const done = g.variants.some((v: any) => confirmed.has(v.product_code)) || skipped.has(g.product_id);
       return { x: pos.x, y: pos.y, zone: g.zone, label: g.name, done };
     });
-  }, [ordered, trip?.confirmedCodes]);
+  }, [ordered, trip?.confirmedCodes, skipped]);
 
   const confirmed = new Set(trip?.confirmedCodes ?? []);
   const isConfirmed = (g: any) => g.variants.some((v: any) => confirmed.has(v.product_code));
