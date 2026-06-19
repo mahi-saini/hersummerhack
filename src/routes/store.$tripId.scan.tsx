@@ -1,9 +1,9 @@
 import { AppShell } from "@/components/AppShell";
-import { useProducts, byCode } from "@/lib/products";
+import { useProducts, byCode, groupByProductId } from "@/lib/products";
 import { useTrip, updateTrip } from "@/lib/trip-store";
 import { ensureScanditContext, Camera, FrameSourceState, DataCaptureView } from "@/lib/scandit";
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarcodeCapture,
   BarcodeCaptureSettings,
@@ -11,7 +11,7 @@ import {
   Symbology,
   type BarcodeCaptureSession,
 } from "@scandit/web-datacapture-barcode";
-import { CheckCircle2, ListPlus, ShoppingBag, X } from "lucide-react";
+import { CheckCircle2, Circle, ListPlus, ShoppingBag, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/store/$tripId/scan")({
