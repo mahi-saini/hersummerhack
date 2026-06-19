@@ -87,7 +87,7 @@ function AR() {
         void transparent;
 
         view.highlightProvider = {
-          highlightForBarcode: (barcode: Barcode, callback: (h: unknown) => void) => {
+          highlightForBarcode: async (barcode: Barcode, callback: (h: any) => void) => {
             const code = barcode.data ?? "";
             if (pickCodesRef.current.has(code)) {
               const product = byCode(products.data!, code);
