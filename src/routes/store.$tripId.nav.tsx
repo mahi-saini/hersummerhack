@@ -45,6 +45,9 @@ function Nav() {
       if (resolved.length) return { ...candidate, resolved };
     }
 
+    const fallback = Array.from(groups.values()).slice(0, 8) as any[];
+    if (fallback.length && rawTrip) return { ids: fallback.map((g) => g.product_id), fromPicks: false, resolved: fallback };
+
     return { ids: [], fromPicks: true, resolved: [] as any[] };
   }, [trip, groups, codeToProductId]);
 
