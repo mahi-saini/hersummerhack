@@ -83,6 +83,11 @@ function Nav() {
   const confirmed = new Set(trip?.confirmedCodes ?? []);
   const isConfirmed = (g: any) => g.variants.some((v: any) => confirmed.has(v.product_code));
 
+  const [selected, setSelected] = useState<number | null>(null);
+  const nextIdx = pins.findIndex((p) => !p.done);
+  const focusIdx = selected ?? (nextIdx >= 0 ? nextIdx : null);
+  const focused = focusIdx != null ? ordered[focusIdx] : null;
+
   return (
     <AppShell title="Your route" back={`/store/${tripId}`}>
       {tripStatus === "loading" || products.isLoading ? (
@@ -100,10 +105,25 @@ function Nav() {
               Showing your AI recommendations — swipe to lock in your picks for a tighter route.
             </div>
           )}
-          <StoreMap pins={pins} />
+          {focused && (
+            <div className="mb-3 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
+              <span
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                style={{ background: ZONE_INFO[focused.zone]?.color ?? "#888" }}
+              >
+                {(focusIdx ?? 0) + 1}
+              </span>
+              <span className="flex-1 truncate">
+                <span className="font-semibold">Next: {focused.name}</span>
+                <span className="text-muted-foreground"> · {ZONE_INFO[focused.zone]?.name} · Aisle {focused.aisle}</span>
+              </span>
+            </div>
+          )}
+          <StoreMap pins={pins} selectedIndex={focusIdx} onSelect={(i) => setSelected(i === selected ? null : i)} />
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            Optimized path: nearest aisle first, then on to checkout.
+            Tap any stop on the map or list to focus it. Path follows the aisles.
           </p>
+
 
           <ol className="mt-5 space-y-3">
             {ordered.map((g, i) => {
