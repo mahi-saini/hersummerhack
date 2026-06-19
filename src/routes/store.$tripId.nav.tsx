@@ -99,13 +99,14 @@ function Nav() {
 
   const [arc, setArc] = useState(0);
   const [walking, setWalking] = useState(false);
-  const rafRef = useRef<number | null>(null);
-  const lastT = useRef<number>(0);
+  const [stepCount, setStepCount] = useState(0);
+  const [motionDetected, setMotionDetected] = useState(false);
 
   // Reset position when the route changes
   useEffect(() => {
     setArc(0);
     setWalking(false);
+    setStepCount(0);
   }, [pins.length, tripId]);
 
   // Per-pin arc thresholds; pause within 1.5 units of the next un-done pin
@@ -117,34 +118,78 @@ function Nav() {
 
   const arrived = !!route && Math.abs(arc - targetArc) < ARRIVE_RADIUS && nextIdx >= 0;
 
-  // Animation loop
+  // Step-detected walking: advance only when the phone actually moves.
+  // Uses DeviceMotion accelerometer; falls back to a slow crawl on desktops
+  // that never emit motion events, so the demo isn't completely stuck.
   useEffect(() => {
     if (!walking || !route) return;
-    const speed = 8; // map units per second
-    lastT.current = 0;
-    const step = (t: number) => {
-      // First frame: seed timestamp so dt is ~16ms, not a multi-second jump
-      if (lastT.current === 0) {
-        lastT.current = t;
-        rafRef.current = requestAnimationFrame(step);
-        return;
-      }
-      const dt = (t - lastT.current) / 1000;
-      lastT.current = t;
+
+    let cancelled = false;
+    let removeListener: (() => void) | null = null;
+    let sawMotion = false;
+
+    const state = { baseline: 9.8, lastStepT: 0 };
+    const STEP_THRESHOLD = 1.6; // m/s^2 above baseline
+    const MIN_STEP_MS = 280;
+    const UNITS_PER_STEP = 1.1;
+
+    const advance = (delta: number) => {
       setArc((prev) => {
-        const next = Math.min(prev + speed * dt, targetArc);
+        const next = Math.min(prev + delta, targetArc);
         if (Math.abs(next - targetArc) < ARRIVE_RADIUS) {
           setWalking(false);
           return targetArc;
         }
         return next;
       });
-      rafRef.current = requestAnimationFrame(step);
     };
-    rafRef.current = requestAnimationFrame(step);
+
+    const onMotion = (e: DeviceMotionEvent) => {
+      const a = e.accelerationIncludingGravity || e.acceleration;
+      if (!a || a.x == null) return;
+      sawMotion = true;
+      setMotionDetected(true);
+      const mag = Math.hypot(a.x ?? 0, a.y ?? 0, a.z ?? 0);
+      state.baseline = state.baseline * 0.9 + mag * 0.1;
+      const dynamic = mag - state.baseline;
+      const now = performance.now();
+      if (dynamic > STEP_THRESHOLD && now - state.lastStepT > MIN_STEP_MS) {
+        state.lastStepT = now;
+        setStepCount((s) => s + 1);
+        advance(UNITS_PER_STEP);
+      }
+    };
+
+    const attach = () => {
+      if (cancelled) return;
+      window.addEventListener("devicemotion", onMotion);
+      removeListener = () => window.removeEventListener("devicemotion", onMotion);
+    };
+
+    const DM = (window as any).DeviceMotionEvent;
+    if (DM && typeof DM.requestPermission === "function") {
+      DM.requestPermission().then((res: string) => { if (res === "granted") attach(); }).catch(() => {});
+    } else if (DM) {
+      attach();
+    }
+
+    // Desktop fallback: if no motion arrives within 1.2s, crawl forward slowly.
+    let rafId: number | null = null;
+    let last = 0;
+    const tick = (t: number) => {
+      if (cancelled) return;
+      if (last === 0) { last = t; rafId = requestAnimationFrame(tick); return; }
+      const dt = (t - last) / 1000;
+      last = t;
+      if (!sawMotion && t > 1200) advance(2.2 * dt);
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      lastT.current = 0;
+      cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      if (removeListener) removeListener();
     };
   }, [walking, route, targetArc]);
 
