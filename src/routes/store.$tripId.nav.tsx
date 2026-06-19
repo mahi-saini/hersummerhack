@@ -23,28 +23,32 @@ function Nav() {
     [products.data]
   );
 
-  // Source product ids: swiped picks first; fall back to AI recommendations
-  // so the map is still useful before the user has finished swiping.
-  const sourceIds = useMemo(() => {
-    const rawTrip = trip as any;
-    const picks = normalizeProductIds([
-      ...(rawTrip?.picks ?? []),
-      ...(rawTrip?.matches ?? []),
-      ...(rawTrip?.matched ?? []),
-      ...(rawTrip?.shortlist ?? []),
-      ...(rawTrip?.shortlisted ?? []),
-      ...(rawTrip?.selectedProducts ?? []),
-      ...(rawTrip?.confirmedCodes ?? []),
-    ]);
-    if (picks.length) return { ids: picks, fromPicks: true };
-    const recs = normalizeProductIds(rawTrip?.recommendations ?? []);
-    return { ids: recs, fromPicks: false };
-  }, [trip]);
+  const resolveGroup = (id: string) => groups.get(id) ?? groups.get(codeToProductId.get(id) ?? "");
 
-  const resolved = useMemo(
-    () => sourceIds.ids.map((id) => groups.get(id) ?? groups.get(codeToProductId.get(id) ?? "")).filter(Boolean) as any[],
-    [sourceIds.ids, groups, codeToProductId]
-  );
+  // Source product ids: swiped picks first; fall back to other saved match
+  // shapes, then recommendations, so older trips still show a route.
+  const routeSource = useMemo(() => {
+    const rawTrip = trip as any;
+    const candidates = [
+      { ids: normalizeProductIds(rawTrip?.picks ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.matches ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.matched ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.shortlist ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.shortlisted ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.selectedProducts ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.confirmedCodes ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.recommendations ?? []), fromPicks: false },
+    ];
+
+    for (const candidate of candidates) {
+      const resolved = candidate.ids.map(resolveGroup).filter(Boolean) as any[];
+      if (resolved.length) return { ...candidate, resolved };
+    }
+
+    return { ids: [], fromPicks: true, resolved: [] as any[] };
+  }, [trip, groups, codeToProductId]);
+
+  const resolved = routeSource.resolved;
 
   // Optimized walking order: nearest-neighbor across zones, products in same
   // zone grouped together so the shopper doesn't backtrack.
@@ -88,7 +92,7 @@ function Nav() {
         </div>
       ) : (
         <>
-          {!sourceIds.fromPicks && (
+          {!routeSource.fromPicks && (
             <div className="mb-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
               Showing your AI recommendations — swipe to lock in your picks for a tighter route.
             </div>
