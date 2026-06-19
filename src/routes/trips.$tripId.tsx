@@ -168,9 +168,8 @@ function Action({
 }) {
   return (
     <Link
-      // @ts-expect-error - dynamic typed link
-      to={to}
-      params={params}
+      to={to as any}
+      params={params as any}
       className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:shadow"
     >
       <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-white ${color}`}>

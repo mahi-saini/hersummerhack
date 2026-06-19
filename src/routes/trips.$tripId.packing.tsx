@@ -70,7 +70,7 @@ function Packing() {
                 {g.items.map((it) => {
                   const grp = groups.get(it.product_id);
                   if (!grp) return null;
-                  const inStockSizes = grp.variants.filter((v) => v.stock_total > 0).map((v) => v.size);
+                  const inStockSizes = grp.variants.filter((v: any) => v.stock_total > 0).map((v: any) => v.size);
                   return (
                     <li key={it.product_id} className="rounded-xl border border-border bg-card p-3">
                       <div className="flex justify-between gap-2">
@@ -83,7 +83,7 @@ function Packing() {
                       {it.note && <div className="mt-1 text-xs italic text-muted-foreground">{it.note}</div>}
                       <div className="mt-2 flex flex-wrap gap-1">
                         {inStockSizes.length > 0 ? (
-                          inStockSizes.map((s) => (
+                          inStockSizes.map((s: string) => (
                             <span key={s} className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
                               <CheckCircle2 className="h-3 w-3" /> {s}
                             </span>
