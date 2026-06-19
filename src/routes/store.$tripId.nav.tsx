@@ -5,7 +5,7 @@ import { buildStoreRoute, optimizedZoneOrder, pointAtArc, slotPosition, ZONE_INF
 import { useTrip, useTripStatus } from "@/lib/trip-store";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { ArrowUp, CheckCircle2, MapPin as MapPinIcon, Pause, Play, ScanLine } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export const Route = createFileRoute("/store/$tripId/nav")({
   head: () => ({ meta: [{ title: "Route — TrailMate" }] }),
