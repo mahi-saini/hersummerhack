@@ -120,9 +120,10 @@ function Nav() {
 
   const arrived = !!route && Math.abs(arc - targetArc) < ARRIVE_RADIUS && nextIdx >= 0;
 
-  // Step-detected walking: advance only when the phone actually moves.
-  // Uses DeviceMotion accelerometer; falls back to a slow crawl on desktops
-  // that never emit motion events, so the demo isn't completely stuck.
+  // Step-detected walking. Preferred: LinearAccelerationSensor (Generic
+  // Sensor API) — gravity is already removed so peaks are clean. Fallback:
+  // DeviceMotion accelerationIncludingGravity with a high-pass baseline.
+  // Desktop with no motion stream slow-crawls so the demo still moves.
   useEffect(() => {
     if (!walking || !route) return;
 
@@ -130,8 +131,8 @@ function Nav() {
     let removeListener: (() => void) | null = null;
     let sawMotion = false;
 
-    const state = { baseline: 9.8, lastStepT: 0 };
-    const STEP_THRESHOLD = 1.6; // m/s^2 above baseline
+    const STEP_THRESHOLD = 1.2; // m/s^2 (linear accel, gravity removed)
+    const FALLBACK_THRESHOLD = 1.6; // m/s^2 over baseline (includes gravity)
     const MIN_STEP_MS = 280;
     const UNITS_PER_STEP = 1.1;
 
@@ -146,36 +147,71 @@ function Nav() {
       });
     };
 
-    const onMotion = (e: DeviceMotionEvent) => {
-      const a = e.accelerationIncludingGravity || e.acceleration;
-      if (!a || a.x == null) return;
-      sawMotion = true;
-      setMotionDetected(true);
-      const mag = Math.hypot(a.x ?? 0, a.y ?? 0, a.z ?? 0);
-      state.baseline = state.baseline * 0.9 + mag * 0.1;
-      const dynamic = mag - state.baseline;
+    const peak = { lastStepT: 0, prevMag: 0, rising: false };
+    const registerStep = () => {
       const now = performance.now();
-      if (dynamic > STEP_THRESHOLD && now - state.lastStepT > MIN_STEP_MS) {
-        state.lastStepT = now;
-        setStepCount((s) => s + 1);
-        advance(UNITS_PER_STEP);
+      if (now - peak.lastStepT < MIN_STEP_MS) return;
+      peak.lastStepT = now;
+      setStepCount((s) => s + 1);
+      advance(UNITS_PER_STEP);
+    };
+
+    // Path 1: LinearAccelerationSensor (Chrome/Android, Edge)
+    const LAS = (window as any).LinearAccelerationSensor;
+    let sensorStarted = false;
+    if (LAS) {
+      try {
+        const sensor = new LAS({ frequency: 50 });
+        const onReading = () => {
+          sawMotion = true;
+          setMotionDetected(true);
+          const mag = Math.hypot(sensor.x ?? 0, sensor.y ?? 0, sensor.z ?? 0);
+          if (mag > STEP_THRESHOLD && mag > peak.prevMag) peak.rising = true;
+          else if (peak.rising && mag < peak.prevMag) { peak.rising = false; registerStep(); }
+          peak.prevMag = mag;
+        };
+        sensor.addEventListener("reading", onReading);
+        sensor.addEventListener("error", () => {});
+        sensor.start();
+        sensorStarted = true;
+        removeListener = () => {
+          try { sensor.stop(); } catch {}
+          sensor.removeEventListener("reading", onReading);
+        };
+      } catch {
+        sensorStarted = false;
       }
-    };
-
-    const attach = () => {
-      if (cancelled) return;
-      window.addEventListener("devicemotion", onMotion);
-      removeListener = () => window.removeEventListener("devicemotion", onMotion);
-    };
-
-    const DM = (window as any).DeviceMotionEvent;
-    if (DM && typeof DM.requestPermission === "function") {
-      DM.requestPermission().then((res: string) => { if (res === "granted") attach(); }).catch(() => {});
-    } else if (DM) {
-      attach();
     }
 
-    // Desktop fallback: if no motion arrives within 1.2s, crawl forward slowly.
+    // Path 2: DeviceMotion fallback (Safari / iOS)
+    if (!sensorStarted) {
+      const baseline = { value: 9.8 };
+      const onMotion = (e: DeviceMotionEvent) => {
+        const a = e.accelerationIncludingGravity || e.acceleration;
+        if (!a || a.x == null) return;
+        sawMotion = true;
+        setMotionDetected(true);
+        const mag = Math.hypot(a.x ?? 0, a.y ?? 0, a.z ?? 0);
+        baseline.value = baseline.value * 0.9 + mag * 0.1;
+        const dynamic = Math.abs(mag - baseline.value);
+        if (dynamic > FALLBACK_THRESHOLD && dynamic > peak.prevMag) peak.rising = true;
+        else if (peak.rising && dynamic < peak.prevMag) { peak.rising = false; registerStep(); }
+        peak.prevMag = dynamic;
+      };
+      const attach = () => {
+        if (cancelled) return;
+        window.addEventListener("devicemotion", onMotion);
+        removeListener = () => window.removeEventListener("devicemotion", onMotion);
+      };
+      const DM = (window as any).DeviceMotionEvent;
+      if (DM && typeof DM.requestPermission === "function") {
+        DM.requestPermission().then((res: string) => { if (res === "granted") attach(); }).catch(() => {});
+      } else if (DM) {
+        attach();
+      }
+    }
+
+    // Desktop fallback: if nothing arrives within 1.2s, crawl forward slowly.
     let rafId: number | null = null;
     let last = 0;
     const tick = (t: number) => {
