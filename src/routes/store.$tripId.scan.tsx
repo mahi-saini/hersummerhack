@@ -370,3 +370,80 @@ function Scan() {
     </AppShell>
   );
 }
+
+type FitVerdict = "good" | "warn" | "bad";
+type FitAssessment = { verdict: FitVerdict; headline: string; reasons: string[] };
+
+function fitBadgeClass(v: FitVerdict): string {
+  if (v === "good") return "bg-emerald-100 text-emerald-800";
+  if (v === "warn") return "bg-amber-100 text-amber-800";
+  return "bg-rose-100 text-rose-800";
+}
+
+function classifyTripTemp(trip: { weather?: string; month?: string; country?: string; activities?: string[] }): "cold" | "mild" | "warm" | "unknown" {
+  const blob = `${trip.weather ?? ""} ${trip.month ?? ""} ${trip.country ?? ""} ${(trip.activities ?? []).join(" ")}`.toLowerCase();
+  if (/(cold|winter|snow|sub[- ]?zero|freezing|alpine|ski|mountaineer|ice|arctic|nordic|january|february|december)/.test(blob)) return "cold";
+  if (/(hot|tropical|desert|summer|beach|jungle|july|august|june)/.test(blob)) return "warm";
+  if (/(mild|spring|autumn|fall|rain|wet|temperate|october|april|may|september|march|november)/.test(blob)) return "mild";
+  return "unknown";
+}
+
+function assessFit(p: { name: string; category?: string; tags?: string[]; temp_rating_c: number | null; waterproof_rating_mm: number | null; weight_g: number | null; material?: string }, trip: { weather?: string; month?: string; country?: string; activities?: string[] }): FitAssessment {
+  const climate = classifyTripTemp(trip);
+  const tags = (p.tags ?? []).map((t) => t.toLowerCase());
+  const cat = (p.category ?? "").toLowerCase();
+  const name = p.name.toLowerCase();
+  const isJacket = /jacket|shell|parka|coat|insulation|down|fleece/.test(cat + " " + name + " " + tags.join(" "));
+  const isFootwear = /boot|shoe|footwear|sandal/.test(cat + " " + name);
+  const isSleep = /sleep|bag|quilt/.test(cat + " " + name + " " + tags.join(" "));
+  const isShelter = /tent|shelter|tarp/.test(cat + " " + name);
+  const wantsWet = /(rain|wet|monsoon)/.test(`${trip.weather ?? ""} ${trip.month ?? ""}`.toLowerCase());
+
+  const reasons: string[] = [];
+  let verdict: FitVerdict = "good";
+
+  // Temperature rating
+  if (p.temp_rating_c != null) {
+    if (climate === "cold" && p.temp_rating_c > 5) { verdict = "bad"; reasons.push(`Rated to ${p.temp_rating_c}°C — too warm-weather for a cold trip.`); }
+    else if (climate === "cold" && p.temp_rating_c > -5) { if (verdict !== "bad") verdict = "warn"; reasons.push(`Rated to ${p.temp_rating_c}°C — borderline for cold conditions; consider warmer.`); }
+    else if (climate === "warm" && p.temp_rating_c < -5) { if (verdict !== "bad") verdict = "warn"; reasons.push(`Rated to ${p.temp_rating_c}°C — likely too warm for a hot-weather trip.`); }
+    else reasons.push(`Temperature rating ${p.temp_rating_c}°C matches your trip.`);
+  } else if (isJacket || isSleep) {
+    // No rating — infer from weight & material
+    if (climate === "cold" && p.weight_g != null && p.weight_g < 350 && isJacket) {
+      verdict = "bad";
+      reasons.push(`This is a lightweight ${isJacket ? "shell" : "piece"} (${p.weight_g}g) — not warm enough for cold weather. Look for insulated/down options.`);
+    } else if (climate === "cold" && /windbreaker|ultralight|packable/.test(name + " " + tags.join(" "))) {
+      verdict = "bad";
+      reasons.push("Marketed as ultralight/packable — won't keep you warm on a cold trip.");
+    }
+  }
+
+  // Waterproofing
+  if (wantsWet) {
+    if (p.waterproof_rating_mm != null && p.waterproof_rating_mm >= 10000) reasons.push(`Waterproof to ${p.waterproof_rating_mm}mm — solid for wet weather.`);
+    else if (p.waterproof_rating_mm != null && p.waterproof_rating_mm < 5000 && (isJacket || isFootwear || isShelter)) {
+      if (verdict !== "bad") verdict = "warn";
+      reasons.push(`Only ${p.waterproof_rating_mm}mm waterproof — may leak in sustained rain.`);
+    } else if (p.waterproof_rating_mm == null && (isJacket || isFootwear || isShelter)) {
+      if (verdict !== "bad") verdict = "warn";
+      reasons.push("No waterproof rating listed — risky for the wet weather you described.");
+    }
+  }
+
+  // Activity match
+  const acts = (trip.activities ?? []).map((a) => a.toLowerCase());
+  if (acts.some((a) => /climb|mountaineer|alpine/.test(a)) && /casual|urban|lifestyle/.test(tags.join(" "))) {
+    if (verdict !== "bad") verdict = "warn";
+    reasons.push("Tagged as casual/urban — not built for technical alpine use.");
+  }
+
+  if (!reasons.length) reasons.push("Looks suitable for the trip you set up.");
+
+  const headline =
+    verdict === "bad" ? "Skip this for your trip" :
+    verdict === "warn" ? "Could work, but check the details" :
+    "Good match for your trip";
+
+  return { verdict, headline, reasons };
+}
