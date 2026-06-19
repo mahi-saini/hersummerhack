@@ -70,7 +70,28 @@ export function useTrip(id: string | undefined): Trip | undefined {
     const refresh = () => setTrip(getTrip(id));
     refresh();
     window.addEventListener("trailmate:trips-changed", refresh);
-    return () => window.removeEventListener("trailmate:trips-changed", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("trailmate:trips-changed", refresh);
+      window.removeEventListener("storage", refresh);
+    };
   }, [id]);
   return trip;
 }
+
+export function useTripStatus(id: string | undefined): "loading" | "found" | "missing" {
+  const [status, setStatus] = useState<"loading" | "found" | "missing">("loading");
+  useEffect(() => {
+    if (!id) {
+      setStatus("missing");
+      return;
+    }
+    const refresh = () => setStatus(getTrip(id) ? "found" : "missing");
+    refresh();
+    window.addEventListener("trailmate:trips-changed", refresh);
+    return () => window.removeEventListener("trailmate:trips-changed", refresh);
+  }, [id]);
+  return status;
+}
+
+
