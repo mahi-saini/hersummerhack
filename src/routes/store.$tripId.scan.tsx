@@ -268,6 +268,62 @@ function Scan() {
           )}
         </div>
       )}
+
+      {pickGroups.length > 0 && (
+        <div className="mt-6">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Your list
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              Tap to check off · trash to remove
+            </div>
+          </div>
+          <ul className="space-y-2">
+            {pickGroups.map((g) => {
+              const checked = isGroupChecked(g);
+              return (
+                <li
+                  key={g.product_id}
+                  className={`flex items-center gap-3 rounded-xl border p-3 transition ${
+                    checked ? "border-emerald-300 bg-emerald-50" : "border-border bg-card"
+                  }`}
+                >
+                  <button
+                    onClick={() => toggleCheck(g)}
+                    className="shrink-0"
+                    aria-label={checked ? "Uncheck" : "Check off"}
+                  >
+                    {checked ? (
+                      <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                    ) : (
+                      <Circle className="h-6 w-6 text-muted-foreground" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => toggleCheck(g)}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <div className={`truncate text-sm font-semibold ${checked ? "line-through text-muted-foreground" : ""}`}>
+                      {g.name}
+                    </div>
+                    <div className="truncate text-[11px] text-muted-foreground">
+                      {g.brand} · Zone {g.zone} · Aisle {g.aisle}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => removeFromList(g)}
+                    className="shrink-0 rounded-lg p-2 text-muted-foreground hover:bg-rose-50 hover:text-rose-600"
+                    aria-label="Remove from list"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </AppShell>
   );
 }
