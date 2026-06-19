@@ -20,6 +20,8 @@ const STAGES = [
   { key: "checklist", label: "Generating your checklist…", Icon: Sparkles },
 ] as const;
 
+const MIN_DURATION_MS = 3000;
+
 function Preparing() {
   const { tripId } = useParams({ from: "/trips/$tripId/preparing" });
   const navigate = useNavigate();
@@ -29,6 +31,7 @@ function Preparing() {
   const fn = useServerFn(generateChecklist);
   const [stageIdx, setStageIdx] = useState(0);
   const ranRef = useRef(false);
+  const startedAtRef = useRef<number>(Date.now());
 
   const gen = useMutation({
     mutationFn: async () => {
@@ -66,6 +69,7 @@ function Preparing() {
     if (ranRef.current) return;
     if (!trip || !products.data) return;
     ranRef.current = true;
+    startedAtRef.current = Date.now();
     // If recommendations already exist, just skip ahead
     if ((trip.recommendations?.length ?? 0) > 0) return;
     gen.mutate();
@@ -78,18 +82,19 @@ function Preparing() {
     return () => clearTimeout(t);
   }, [stageIdx]);
 
-  // When AI finishes (or was already done), tick the final stage and navigate
+  // When AI finishes (or was already done), enforce minimum dwell then navigate
   useEffect(() => {
     const ready = (trip?.recommendations?.length ?? 0) > 0 || gen.isSuccess;
     if (!ready) return;
-    // Ensure we've at least reached the final stage visually
+    const elapsed = Date.now() - startedAtRef.current;
+    const remaining = Math.max(MIN_DURATION_MS - elapsed, 400);
     const minDwell = setTimeout(() => {
       setStageIdx(STAGES.length); // mark all done
       const go = setTimeout(() => {
         navigate({ to: "/trips/$tripId/swipe", params: { tripId } });
       }, 650);
       return () => clearTimeout(go);
-    }, 400);
+    }, remaining);
     return () => clearTimeout(minDwell);
   }, [trip?.recommendations, gen.isSuccess, navigate, tripId]);
 
