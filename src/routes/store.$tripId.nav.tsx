@@ -55,9 +55,20 @@ function Nav() {
 
   // Optimized walking order: nearest-neighbor across zones, products in same
   // zone grouped together so the shopper doesn't backtrack.
+  const CHECKOUT_ITEM = {
+    product_id: "__checkout__",
+    name: "Checkout",
+    zone: "CHECKOUT",
+    aisle: "—",
+    variants: [] as any[],
+    isCheckout: true,
+  } as any;
+
   const ordered = useMemo(() => {
     const zoneOrder = optimizedZoneOrder(resolved.map((p) => p.zone));
-    return zoneOrder.flatMap((z) => resolved.filter((p) => p.zone === z));
+    const items = zoneOrder.flatMap((z) => resolved.filter((p) => p.zone === z));
+    // Always end the route at Checkout
+    return items.length ? [...items, CHECKOUT_ITEM] : items;
   }, [resolved]);
 
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
@@ -66,6 +77,7 @@ function Nav() {
   const pins = useMemo<MapPin[]>(() => {
     const byZone = new Map<string, any[]>();
     for (const g of ordered) {
+      if (g.isCheckout) continue;
       const arr = byZone.get(g.zone) ?? [];
       arr.push(g);
       byZone.set(g.zone, arr);
@@ -73,6 +85,10 @@ function Nav() {
     const slotIndex = new Map<string, number>();
     const confirmed = new Set(trip?.confirmedCodes ?? []);
     return ordered.map((g) => {
+      if (g.isCheckout) {
+        const pos = ZONE_INFO.CHECKOUT.pos;
+        return { x: pos.x, y: pos.y, zone: "CHECKOUT", label: "Checkout", done: false };
+      }
       const total = byZone.get(g.zone)!.length;
       const idx = slotIndex.get(g.zone) ?? 0;
       slotIndex.set(g.zone, idx + 1);
