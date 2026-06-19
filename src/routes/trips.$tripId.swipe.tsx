@@ -42,21 +42,36 @@ function SwipePage() {
     setIdx((i) => i + 1);
   }
 
+  const navigate = useNavigate();
+  const done = !current && (trip?.recommendations?.length ?? 0) > 0;
+
   return (
-    <AppShell title="Your matches" back={`/trips/${tripId}`}>
-      {!current ? (
-        <div className="rounded-3xl border border-dashed border-border p-8 text-center">
-          <div className="font-display mb-2 text-2xl">It's a wrap.</div>
-          <div className="mb-4 text-sm text-muted-foreground">
-            You matched with {trip?.picks?.length ?? 0} pieces of gear.
+    <AppShell title="Your matches" back={`/trips/${tripId}/`}>
+      {done ? (
+        <div className="rounded-3xl border border-border bg-card p-8 text-center shadow-sm">
+          <div className="mb-2 text-5xl">🏔️</div>
+          <div className="font-display mb-2 text-2xl">Saved for the store.</div>
+          <div className="mb-5 text-sm text-muted-foreground">
+            You matched with {trip?.picks?.length ?? 0} pieces of gear. We'll greet you with
+            the list and an aisle-by-aisle route the moment you arrive.
           </div>
           <Link
-            to="/trips/$tripId"
-            params={{ tripId }}
+            to="/"
             className="inline-block rounded-2xl bg-primary px-5 py-3 font-semibold text-primary-foreground"
           >
-            Back to trip
+            Done — see you at the store
           </Link>
+          <Link
+            to="/store/$tripId"
+            params={{ tripId }}
+            className="mt-3 flex items-center justify-center gap-2 text-xs font-semibold text-primary"
+          >
+            <MapPin className="h-4 w-4" /> I'm already in the store
+          </Link>
+        </div>
+      ) : !current ? (
+        <div className="rounded-3xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+          No matches yet — generate them from your trip first.
         </div>
       ) : (
         <>
@@ -71,21 +86,21 @@ function SwipePage() {
           </div>
           <div className="mt-6 flex items-center justify-center gap-6">
             <button
-              className="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow"
+              className="flex h-16 w-16 items-center justify-center rounded-full border border-border bg-card text-2xl shadow"
               onClick={() => decide(false)}
               aria-label="Skip"
             >
-              <X className="h-7 w-7" />
+              :/
             </button>
             <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
               {idx + 1} / {queue.length}
             </div>
             <button
-              className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg"
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-2xl shadow-lg"
               onClick={() => decide(true)}
               aria-label="Match"
             >
-              <Heart className="h-7 w-7 fill-current" />
+              ❤️
             </button>
           </div>
         </>
@@ -93,6 +108,7 @@ function SwipePage() {
     </AppShell>
   );
 }
+
 
 function Card({
   group,
