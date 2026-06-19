@@ -415,10 +415,12 @@ function Nav() {
                   <div className="flex-1">
                     <div className="text-sm font-semibold">{g.name}</div>
                     <div className="text-[11px] text-muted-foreground">
-                      Zone {g.zone} · {zone?.name} · Aisle {g.aisle}
+                      {g.isCheckout ? "Final stop · pay & leave" : `Zone ${g.zone} · ${zone?.name} · Aisle ${g.aisle}`}
                     </div>
                   </div>
-                  {done ? (
+                  {g.isCheckout ? (
+                    <MapPinIcon className="h-5 w-5 self-center text-slate-500" />
+                  ) : done ? (
                     <CheckCircle2 className="h-5 w-5 self-center text-emerald-500" />
                   ) : (
                     <Link
