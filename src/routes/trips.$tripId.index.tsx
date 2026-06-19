@@ -87,7 +87,7 @@ function TripDashboard() {
           {trip.country} · {trip.month} · {trip.days} days
         </div>
         <div className="font-display mt-2 text-3xl leading-tight">
-          {trip.weather || "Your match plan"}
+          {trip.name || "Your match plan"}
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {trip.activities?.map((a) => (
