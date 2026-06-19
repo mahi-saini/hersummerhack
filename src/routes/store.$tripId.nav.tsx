@@ -5,7 +5,7 @@ import { optimizedZoneOrder, slotPosition, ZONE_INFO } from "@/lib/store-map";
 import { useTrip, useTripStatus } from "@/lib/trip-store";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { CheckCircle2, ScanLine } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/store/$tripId/nav")({
   head: () => ({ meta: [{ title: "Route — TrailMate" }] }),
@@ -83,6 +83,11 @@ function Nav() {
   const confirmed = new Set(trip?.confirmedCodes ?? []);
   const isConfirmed = (g: any) => g.variants.some((v: any) => confirmed.has(v.product_code));
 
+  const [selected, setSelected] = useState<number | null>(null);
+  const nextIdx = pins.findIndex((p) => !p.done);
+  const focusIdx = selected ?? (nextIdx >= 0 ? nextIdx : null);
+  const focused = focusIdx != null ? ordered[focusIdx] : null;
+
   return (
     <AppShell title="Your route" back={`/store/${tripId}`}>
       {tripStatus === "loading" || products.isLoading ? (
@@ -100,19 +105,36 @@ function Nav() {
               Showing your AI recommendations — swipe to lock in your picks for a tighter route.
             </div>
           )}
-          <StoreMap pins={pins} />
+          {focused && (
+            <div className="mb-3 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
+              <span
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                style={{ background: ZONE_INFO[focused.zone]?.color ?? "#888" }}
+              >
+                {(focusIdx ?? 0) + 1}
+              </span>
+              <span className="flex-1 truncate">
+                <span className="font-semibold">Next: {focused.name}</span>
+                <span className="text-muted-foreground"> · {ZONE_INFO[focused.zone]?.name} · Aisle {focused.aisle}</span>
+              </span>
+            </div>
+          )}
+          <StoreMap pins={pins} selectedIndex={focusIdx} onSelect={(i) => setSelected(i === selected ? null : i)} />
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            Optimized path: nearest aisle first, then on to checkout.
+            Tap any stop on the map or list to focus it. Path follows the aisles.
           </p>
+
 
           <ol className="mt-5 space-y-3">
             {ordered.map((g, i) => {
               const done = isConfirmed(g);
               const zone = ZONE_INFO[g.zone];
+              const isFocus = i === focusIdx;
               return (
                 <li
                   key={g.product_id}
-                  className={`flex gap-3 rounded-xl border bg-card p-3 ${done ? "border-emerald-300 bg-emerald-50/40" : "border-border"}`}
+                  onClick={() => setSelected(i === selected ? null : i)}
+                  className={`flex cursor-pointer gap-3 rounded-xl border bg-card p-3 transition ${done ? "border-emerald-300 bg-emerald-50/40" : isFocus ? "border-primary/60 bg-primary/5 ring-2 ring-primary/30" : "border-border hover:border-primary/30"}`}
                 >
                   <div
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
