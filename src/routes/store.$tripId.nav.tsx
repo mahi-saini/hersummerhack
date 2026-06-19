@@ -116,14 +116,14 @@ function Nav() {
   );
 
   const [arc, setArc] = useState(0);
-  const [walking, setWalking] = useState(false);
+  const [walking, setWalking] = useState(true);
   const [stepCount, setStepCount] = useState(0);
   const [motionDetected, setMotionDetected] = useState(false);
 
-  // Reset position when the route changes
+  // Reset position when the route changes — keep auto-walking on
   useEffect(() => {
     setArc(0);
-    setWalking(false);
+    setWalking(true);
     setStepCount(0);
   }, [pins.length, tripId]);
 
