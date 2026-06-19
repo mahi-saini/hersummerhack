@@ -88,6 +88,73 @@ function Nav() {
   const focusIdx = selected ?? (nextIdx >= 0 ? nextIdx : null);
   const focused = focusIdx != null ? ordered[focusIdx] : null;
 
+  // ---- Walking simulator: arc-length position along the path ----
+  const route = useMemo(
+    () =>
+      pins.length
+        ? buildStoreRoute(pins.map((p) => ({ x: p.x, y: p.y })), pins.map((p) => p.zone))
+        : null,
+    [pins]
+  );
+
+  const [arc, setArc] = useState(0);
+  const [walking, setWalking] = useState(false);
+  const rafRef = useRef<number | null>(null);
+  const lastT = useRef<number>(0);
+
+  // Reset position when the route changes
+  useEffect(() => {
+    setArc(0);
+    setWalking(false);
+  }, [pins.length, tripId]);
+
+  // Per-pin arc thresholds; pause within 1.5 units of the next un-done pin
+  const ARRIVE_RADIUS = 1.5;
+  const targetArc = useMemo(() => {
+    if (!route || nextIdx < 0) return route?.totalLen ?? 0;
+    return route.pinArcs[nextIdx] ?? route.totalLen;
+  }, [route, nextIdx]);
+
+  const arrived = !!route && Math.abs(arc - targetArc) < ARRIVE_RADIUS && nextIdx >= 0;
+
+  // Animation loop
+  useEffect(() => {
+    if (!walking || !route) return;
+    const speed = 6; // map units per second
+    const step = (t: number) => {
+      const dt = lastT.current ? (t - lastT.current) / 1000 : 0;
+      lastT.current = t;
+      setArc((prev) => {
+        const next = Math.min(prev + speed * dt, targetArc);
+        if (Math.abs(next - targetArc) < ARRIVE_RADIUS) {
+          setWalking(false);
+          return targetArc;
+        }
+        return next;
+      });
+      rafRef.current = requestAnimationFrame(step);
+    };
+    lastT.current = 0;
+    rafRef.current = requestAnimationFrame(step);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      lastT.current = 0;
+    };
+  }, [walking, route, targetArc]);
+
+  const walker = route ? pointAtArc(route, arc) : null;
+
+  // Compass-style heading hint
+  const headingLabel = useMemo(() => {
+    if (!walker) return "";
+    const { x, y } = walker.heading;
+    if (Math.hypot(x, y) < 0.001) return "";
+    if (Math.abs(x) > Math.abs(y)) return x > 0 ? "Head right (east)" : "Head left (west)";
+    return y > 0 ? "Head down (south)" : "Head up (north)";
+  }, [walker]);
+
+  const distanceToNext = route && nextIdx >= 0 ? Math.max(0, targetArc - arc) : 0;
+
   return (
     <AppShell title="Your route" back={`/store/${tripId}`}>
       {tripStatus === "loading" || products.isLoading ? (
@@ -106,7 +173,7 @@ function Nav() {
             </div>
           )}
           {focused && (
-            <div className="mb-3 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
+            <div className={`mb-3 flex items-center gap-2 rounded-xl border px-3 py-2 text-xs transition ${arrived ? "border-emerald-400 bg-emerald-50" : "border-primary/30 bg-primary/5"}`}>
               <span
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
                 style={{ background: ZONE_INFO[focused.zone]?.color ?? "#888" }}
@@ -114,14 +181,94 @@ function Nav() {
                 {(focusIdx ?? 0) + 1}
               </span>
               <span className="flex-1 truncate">
-                <span className="font-semibold">Next: {focused.name}</span>
-                <span className="text-muted-foreground"> · {ZONE_INFO[focused.zone]?.name} · Aisle {focused.aisle}</span>
+                {arrived ? (
+                  <>
+                    <span className="font-semibold text-emerald-700">You've arrived</span>
+                    <span className="text-muted-foreground"> · {focused.name} · Aisle {focused.aisle}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-semibold">Next: {focused.name}</span>
+                    <span className="text-muted-foreground"> · {ZONE_INFO[focused.zone]?.name} · Aisle {focused.aisle}</span>
+                  </>
+                )}
               </span>
             </div>
           )}
-          <StoreMap pins={pins} selectedIndex={focusIdx} onSelect={(i) => setSelected(i === selected ? null : i)} />
+          <StoreMap
+            pins={pins}
+            selectedIndex={focusIdx}
+            onSelect={(i) => setSelected(i === selected ? null : i)}
+            userPos={walker?.pos ?? null}
+            heading={walker?.heading ?? null}
+            arrived={arrived}
+          />
+
+          {/* Live nav banner */}
+          <div className="mt-3 flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
+            <div
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${arrived ? "bg-emerald-500 text-white" : "bg-blue-600 text-white"}`}
+              style={
+                walker && !arrived
+                  ? { transform: `rotate(${(Math.atan2(walker.heading.y, walker.heading.x) * 180) / Math.PI + 90}deg)`, transition: "transform 200ms" }
+                  : undefined
+              }
+            >
+              {arrived ? <MapPinIcon className="h-5 w-5" /> : <ArrowUp className="h-5 w-5" />}
+            </div>
+            <div className="flex-1 text-sm">
+              {arrived ? (
+                <>
+                  <div className="font-semibold text-emerald-700">Scan it to check off this stop</div>
+                  <div className="text-xs text-muted-foreground">Then tap “Continue” to head to the next one.</div>
+                </>
+              ) : nextIdx < 0 ? (
+                <>
+                  <div className="font-semibold">All stops complete</div>
+                  <div className="text-xs text-muted-foreground">Head to checkout when you're ready.</div>
+                </>
+              ) : (
+                <>
+                  <div className="font-semibold">{headingLabel || "Follow the dashed line"}</div>
+                  <div className="text-xs text-muted-foreground">≈ {distanceToNext.toFixed(0)} steps to {focused?.name}</div>
+                </>
+              )}
+            </div>
+            {arrived ? (
+              <Link
+                to="/store/$tripId/scan"
+                params={{ tripId }}
+                search={focused ? { expect: focused.product_id } : {}}
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Scan
+              </Link>
+            ) : nextIdx < 0 ? null : (
+              <button
+                onClick={() => setWalking((w) => !w)}
+                className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+              >
+                {walking ? <><Pause className="h-4 w-4" /> Pause</> : <><Play className="h-4 w-4" /> {arc === 0 ? "Start" : "Walk"}</>}
+              </button>
+            )}
+          </div>
+
+          {arrived && (
+            <button
+              onClick={() => {
+                // Nudge past this pin so the next stop becomes the target
+                if (route && nextIdx >= 0) {
+                  setArc(Math.min(targetArc + ARRIVE_RADIUS + 0.1, route.totalLen));
+                }
+              }}
+              className="mt-2 w-full rounded-xl border border-border bg-card py-2 text-xs text-muted-foreground"
+            >
+              Skip this stop · continue walking
+            </button>
+          )}
+
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            Tap any stop on the map or list to focus it. Path follows the aisles.
+            Tap any stop on the map or list to focus it. The blue arrow shows which way to walk.
           </p>
 
 
