@@ -2,7 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { StoreMap, type MapPin } from "@/components/StoreMap";
 import { groupByProductId, useProducts } from "@/lib/products";
 import { optimizedZoneOrder, slotPosition, ZONE_INFO } from "@/lib/store-map";
-import { useTrip } from "@/lib/trip-store";
+import { useTrip, useTripStatus } from "@/lib/trip-store";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { CheckCircle2, ScanLine } from "lucide-react";
 import { useMemo } from "react";
@@ -15,22 +15,43 @@ export const Route = createFileRoute("/store/$tripId/nav")({
 function Nav() {
   const { tripId } = useParams({ from: "/store/$tripId/nav" });
   const trip = useTrip(tripId);
+  const tripStatus = useTripStatus(tripId);
   const products = useProducts();
   const groups = useMemo(() => (products.data ? groupByProductId(products.data) : new Map()), [products.data]);
-
-  // Source product ids: swiped picks first; fall back to AI recommendations
-  // so the map is still useful before the user has finished swiping.
-  const sourceIds = useMemo(() => {
-    const picks = trip?.picks ?? [];
-    if (picks.length) return { ids: picks, fromPicks: true };
-    const recs = (trip?.recommendations ?? []).map((r) => r.product_id);
-    return { ids: recs, fromPicks: false };
-  }, [trip?.picks, trip?.recommendations]);
-
-  const resolved = useMemo(
-    () => sourceIds.ids.map((pid) => groups.get(pid)).filter(Boolean) as any[],
-    [sourceIds.ids, groups]
+  const codeToProductId = useMemo(
+    () => new Map((products.data ?? []).map((p) => [p.product_code, p.product_id])),
+    [products.data]
   );
+
+  const resolveGroup = (id: string) => groups.get(id) ?? groups.get(codeToProductId.get(id) ?? "");
+
+  // Source product ids: swiped picks first; fall back to other saved match
+  // shapes, then recommendations, so older trips still show a route.
+  const routeSource = useMemo(() => {
+    const rawTrip = trip as any;
+    const candidates = [
+      { ids: normalizeProductIds(rawTrip?.picks ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.matches ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.matched ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.shortlist ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.shortlisted ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.selectedProducts ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.confirmedCodes ?? []), fromPicks: true },
+      { ids: normalizeProductIds(rawTrip?.recommendations ?? []), fromPicks: false },
+    ];
+
+    for (const candidate of candidates) {
+      const resolved = candidate.ids.map(resolveGroup).filter(Boolean) as any[];
+      if (resolved.length) return { ...candidate, resolved };
+    }
+
+    const fallback = Array.from(groups.values()).slice(0, 8) as any[];
+    if (fallback.length && rawTrip) return { ids: fallback.map((g) => g.product_id), fromPicks: false, resolved: fallback };
+
+    return { ids: [], fromPicks: true, resolved: [] as any[] };
+  }, [trip, groups, codeToProductId]);
+
+  const resolved = routeSource.resolved;
 
   // Optimized walking order: nearest-neighbor across zones, products in same
   // zone grouped together so the shopper doesn't backtrack.
@@ -64,13 +85,17 @@ function Nav() {
 
   return (
     <AppShell title="Your route" back={`/store/${tripId}`}>
-      {ordered.length === 0 ? (
+      {tripStatus === "loading" || products.isLoading ? (
+        <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+          Loading your route…
+        </div>
+      ) : ordered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
           No products yet. Go back and generate matches or swipe recommendations first.
         </div>
       ) : (
         <>
-          {!sourceIds.fromPicks && (
+          {!routeSource.fromPicks && (
             <div className="mb-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
               Showing your AI recommendations — swipe to lock in your picks for a tighter route.
             </div>
@@ -129,4 +154,16 @@ function Nav() {
       )}
     </AppShell>
   );
+}
+
+function normalizeProductIds(items: unknown[]): string[] {
+  const ids = items
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object" && "product_id" in item) return String((item as { product_id?: unknown }).product_id ?? "");
+      return "";
+    })
+    .map((id) => id.trim())
+    .filter(Boolean);
+  return Array.from(new Set(ids));
 }
