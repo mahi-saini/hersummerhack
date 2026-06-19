@@ -370,11 +370,9 @@ function Nav() {
             ) : null}
           </div>
 
-          {nextIdx >= 0 && focused && (
+          {nextIdx >= 0 && focused && !focused.isCheckout && (
             <button
               onClick={() => {
-                // Mark current focus as skipped and jump arc past it so the
-                // next un-done pin becomes the target.
                 setSkipped((prev) => {
                   const next = new Set(prev);
                   next.add(focused.product_id);
