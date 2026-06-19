@@ -84,7 +84,7 @@ function TripDashboard() {
     <AppShell title={trip.name || "Trip"} back="/">
       <div className="mb-5 overflow-hidden rounded-3xl bg-gradient-to-br from-secondary to-secondary/80 p-6 text-secondary-foreground shadow-xl">
         <div className="text-[10px] uppercase tracking-[0.2em] opacity-70">
-          {trip.country} · {trip.month} · {trip.days}d
+          {trip.country} · {trip.month} · {trip.days} days
         </div>
         <div className="font-display mt-2 text-3xl leading-tight">
           {trip.weather || "Your match plan"}
