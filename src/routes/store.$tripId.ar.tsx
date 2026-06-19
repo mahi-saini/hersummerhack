@@ -28,22 +28,10 @@ function AR() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [spotted, setSpotted] = useState<Set<string>>(new Set());
-  const [lastSeen, setLastSeen] = useState<{ code: string; status: "pick" | "catalog" | "unknown" } | null>(null);
-
-  // Map pick product_ids -> set of product_codes (variants) we should highlight
-  const pickCodes = useMemo(() => {
-    if (!products.data || !trip?.picks) return new Set<string>();
-    const picksSet = new Set(trip.picks);
-    return new Set(
-      products.data.filter((p) => picksSet.has(p.product_id)).map((p) => p.product_code),
-    );
-  }, [products.data, trip?.picks]);
-
-  // Catalog set for "known product but not a pick"
-  const catalogCodes = useMemo(() => {
-    if (!products.data) return new Set<string>();
-    return new Set(products.data.map((p) => p.product_code));
-  }, [products.data]);
+  const [lastSeen, setLastSeen] = useState<
+    | { code: string; status: "pick" | "catalog" | "unknown"; name?: string }
+    | null
+  >(null);
 
   // Picks for the checklist UI
   const pickGroups = useMemo(() => {
@@ -56,15 +44,21 @@ function AR() {
       : never;
   }, [products.data, trip?.picks]);
 
-  // Refs so the highlight callback (created once) always sees latest data
-  const pickCodesRef = useRef(pickCodes);
-  const catalogCodesRef = useRef(catalogCodes);
+  // Refs so the highlight callback (created once) always sees latest data.
+  // We resolve picks INSIDE the callback by code -> product -> product_id,
+  // which is robust no matter what shape `trip.picks` ends up in.
+  const productsRef = useRef(products.data);
+  const pickIdsRef = useRef<Set<string>>(new Set());
+  const pickCodesRef = useRef<Set<string>>(new Set());
   const tripRef = useRef(trip);
   useEffect(() => {
-    pickCodesRef.current = pickCodes;
-    catalogCodesRef.current = catalogCodes;
+    productsRef.current = products.data;
+    const picks = new Set(trip?.picks ?? []);
+    pickIdsRef.current = picks;
+    // Treat picks as both product_ids AND raw product_codes for safety.
+    pickCodesRef.current = new Set(trip?.picks ?? []);
     tripRef.current = trip;
-  }, [pickCodes, catalogCodes, trip]);
+  }, [products.data, trip]);
 
   useEffect(() => {
     if (!products.data || !trip) return;
