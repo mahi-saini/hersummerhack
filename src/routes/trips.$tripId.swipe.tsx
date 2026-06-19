@@ -129,7 +129,7 @@ function SwipePage() {
               onClick={() => decide(false)}
               aria-label="Skip"
             >
-              :/
+              😕
             </button>
             <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
               {idx + 1} / {queue.length}
