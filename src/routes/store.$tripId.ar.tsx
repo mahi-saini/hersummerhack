@@ -83,7 +83,10 @@ function AR() {
         const fill = Color.fromHex("#10B98140");
         const pickBrush = new Brush(fill, emerald, 3);
 
-        barcodeAr.highlightProvider = {
+        const view = await BarcodeArView.create(containerRef.current!, context, barcodeAr);
+        void transparent;
+
+        view.highlightProvider = {
           highlightForBarcode: (barcode: Barcode, callback: (h: unknown) => void) => {
             const code = barcode.data ?? "";
             if (pickCodesRef.current.has(code)) {
@@ -93,29 +96,23 @@ function AR() {
                   if (prev.has(product.product_id)) return prev;
                   const next = new Set(prev);
                   next.add(product.product_id);
-                  // persist as confirmed too
                   const confirmed = new Set(trip.confirmedCodes ?? []);
                   confirmed.add(product.product_code);
                   updateTrip(tripId, { confirmedCodes: [...confirmed] });
                   return next;
                 });
               }
-              BarcodeArCircleHighlight.create(barcode, BarcodeArCircleHighlightPreset.Dot)
-                .then((hl) => {
-                  hl.brush = pickBrush;
-                  hl.isPulsing = true;
-                  callback(hl);
-                })
-                .catch(() => callback(null));
+              const hl = BarcodeArCircleHighlight.create(barcode, BarcodeArCircleHighlightPreset.Dot);
+              hl.brush = pickBrush;
+              hl.isPulsing = true;
+              callback(hl);
             } else {
               // non-picks stay neutral (no highlight)
               callback(null);
-              void transparent;
             }
           },
         };
 
-        const view = await BarcodeArView.create(containerRef.current!, context, barcodeAr);
         await view.start();
 
         cleanup = () => {
