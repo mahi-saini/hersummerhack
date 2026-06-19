@@ -76,15 +76,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { title: "TrailMate — In-Store AI Concierge" },
+      { name: "description", content: "AI trip planner + in-store concierge for Swiss outdoor retailers. Built on Scandit + Lovable AI." },
+      { name: "author", content: "TrailMate" },
+      { property: "og:title", content: "TrailMate — In-Store AI Concierge" },
+      { property: "og:description", content: "Plan your trip, get an AI gear checklist, then let TrailMate guide you through the store." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
