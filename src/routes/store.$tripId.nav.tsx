@@ -26,9 +26,18 @@ function Nav() {
   // Source product ids: swiped picks first; fall back to AI recommendations
   // so the map is still useful before the user has finished swiping.
   const sourceIds = useMemo(() => {
-    const picks = normalizeProductIds((trip as any)?.picks ?? (trip as any)?.matches ?? []);
+    const rawTrip = trip as any;
+    const picks = normalizeProductIds([
+      ...(rawTrip?.picks ?? []),
+      ...(rawTrip?.matches ?? []),
+      ...(rawTrip?.matched ?? []),
+      ...(rawTrip?.shortlist ?? []),
+      ...(rawTrip?.shortlisted ?? []),
+      ...(rawTrip?.selectedProducts ?? []),
+      ...(rawTrip?.confirmedCodes ?? []),
+    ]);
     if (picks.length) return { ids: picks, fromPicks: true };
-    const recs = normalizeProductIds((trip as any)?.recommendations ?? []);
+    const recs = normalizeProductIds(rawTrip?.recommendations ?? []);
     return { ids: recs, fromPicks: false };
   }, [trip]);
 
