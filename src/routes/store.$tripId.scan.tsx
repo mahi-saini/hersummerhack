@@ -11,7 +11,7 @@ import {
   Symbology,
   type BarcodeCaptureSession,
 } from "@scandit/web-datacapture-barcode";
-import { CheckCircle2, Circle, ListPlus, ShoppingBag, Trash2, X } from "lucide-react";
+import { CheckCircle2, Circle, ListPlus, ShoppingBag, Trash2, X, AlertTriangle, Info, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/store/$tripId/scan")({
