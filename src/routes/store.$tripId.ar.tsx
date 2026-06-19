@@ -191,7 +191,12 @@ function AR() {
             {lastSeen && (
               <div className="pointer-events-none absolute inset-x-3 bottom-3 rounded-xl bg-black/70 px-3 py-2 text-[11px] text-white backdrop-blur">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate font-mono">{lastSeen.code}</span>
+                  <div className="min-w-0 flex-1">
+                    {lastSeen.name && (
+                      <div className="truncate text-[12px] font-semibold">{lastSeen.name}</div>
+                    )}
+                    <div className="truncate font-mono opacity-70">{lastSeen.code}</div>
+                  </div>
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
                       lastSeen.status === "pick"
@@ -208,6 +213,11 @@ function AR() {
                       : "Unknown code"}
                   </span>
                 </div>
+                {found > 0 && (
+                  <div className="mt-1 text-[11px] font-semibold text-emerald-300">
+                    {found} item{found === 1 ? "" : "s"} from your list found
+                  </div>
+                )}
               </div>
             )}
           </>
