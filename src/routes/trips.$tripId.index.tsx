@@ -1,12 +1,13 @@
 import { AppShell } from "@/components/AppShell";
 import { groupByProductId, useProducts } from "@/lib/products";
-import { useTrip, updateTrip } from "@/lib/trip-store";
+import { useTrip, useTripStatus, updateTrip } from "@/lib/trip-store";
 import { generateChecklist } from "@/lib/ai.functions";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, Heart, ListChecks, MapPin, ScanLine, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/trips/$tripId/")({
   head: () => ({ meta: [{ title: "Trip — TrailMate" }] }),
