@@ -1,11 +1,11 @@
 import { AppShell } from "@/components/AppShell";
 import { StoreMap, type MapPin } from "@/components/StoreMap";
 import { groupByProductId, useProducts } from "@/lib/products";
-import { optimizedZoneOrder, slotPosition, ZONE_INFO } from "@/lib/store-map";
+import { buildStoreRoute, optimizedZoneOrder, pointAtArc, slotPosition, ZONE_INFO } from "@/lib/store-map";
 import { useTrip, useTripStatus } from "@/lib/trip-store";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { CheckCircle2, ScanLine } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArrowUp, CheckCircle2, MapPin as MapPinIcon, Pause, Play, ScanLine } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export const Route = createFileRoute("/store/$tripId/nav")({
   head: () => ({ meta: [{ title: "Route — TrailMate" }] }),
