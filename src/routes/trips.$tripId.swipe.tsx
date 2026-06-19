@@ -2,10 +2,11 @@ import { AppShell } from "@/components/AppShell";
 import { ProductHero, specChips } from "@/components/ProductCard";
 import { groupByProductId, useProducts } from "@/lib/products";
 import { useTrip, updateTrip } from "@/lib/trip-store";
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
-import { Heart, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { MapPin } from "lucide-react";
+
 
 export const Route = createFileRoute("/trips/$tripId/swipe")({
   head: () => ({ meta: [{ title: "Swipe — TrailMate" }] }),
