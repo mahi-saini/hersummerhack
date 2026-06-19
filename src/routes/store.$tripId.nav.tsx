@@ -4,7 +4,7 @@ import { groupByProductId, useProducts } from "@/lib/products";
 import { buildStoreRoute, optimizedZoneOrder, pointAtArc, slotPosition, ZONE_INFO } from "@/lib/store-map";
 import { useTrip, useTripStatus } from "@/lib/trip-store";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowUp, CheckCircle2, MapPin as MapPinIcon, Pause, Play, ScanLine } from "lucide-react";
+import { ArrowUp, CheckCircle2, MapPin as MapPinIcon, ScanLine } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 export const Route = createFileRoute("/store/$tripId/nav")({
